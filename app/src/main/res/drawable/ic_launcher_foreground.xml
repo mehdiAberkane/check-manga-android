@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Un tome avec une coche : "je l'ai déjà". -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,28h32a4,4 0,0 1,4 4v44a4,4 0,0 1,-4 4h-32a4,4 0,0 1,-4 -4v-44a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#C62828"
+        android:pathData="M40,28h3v52h-3z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#C62828"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M49,55l6,6l12,-14" />
+</vector>
