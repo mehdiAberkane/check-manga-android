@@ -38,9 +38,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.formatVolumes
 
@@ -60,7 +68,7 @@ fun SeriesDetailScreen(
     // Série en cours (total inconnu) : on affiche jusqu'au dernier tome possédé,
     // suivi d'une case « + » pour marquer le tome suivant.
     val gridSize = maxOf(series.totalVolumes ?: 0, series.lastOwned)
-    val showNextTile = series.totalVolumes == null
+    val showNextTile = series.totalVolumes == null && gridSize < MAX_VOLUME
 
     Scaffold(
         topBar = {
@@ -108,15 +116,29 @@ fun SeriesDetailScreen(
                 )
             }
             items((1..gridSize).toList(), key = { it }) { volume ->
+                val owned = volume in series.ownedVolumes
                 VolumeTile(
                     label = "$volume",
-                    owned = volume in series.ownedVolumes,
+                    owned = owned,
                     onClick = { onToggleVolume(volume) },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Tome $volume"
+                        role = Role.Checkbox
+                        toggleableState = ToggleableState(owned)
+                    },
                 )
             }
             if (showNextTile) {
                 item(key = "next") {
-                    VolumeTile(label = "+", owned = false, onClick = { onToggleVolume(gridSize + 1) })
+                    VolumeTile(
+                        label = "+",
+                        owned = false,
+                        onClick = { onToggleVolume(gridSize + 1) },
+                        modifier = Modifier.semantics {
+                            contentDescription = "J'ai le tome ${gridSize + 1}"
+                            role = Role.Button
+                        },
+                    )
                 }
             }
         }
@@ -175,7 +197,7 @@ private fun SummaryCard(series: Series) {
 }
 
 @Composable
-private fun VolumeTile(label: String, owned: Boolean, onClick: () -> Unit) {
+private fun VolumeTile(label: String, owned: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
@@ -183,10 +205,16 @@ private fun VolumeTile(label: String, owned: Boolean, onClick: () -> Unit) {
         color = if (owned) colors.primary else colors.surface,
         contentColor = if (owned) colors.onPrimary else colors.onSurfaceVariant,
         border = if (owned) null else BorderStroke(1.dp, colors.outline),
-        modifier = Modifier.aspectRatio(0.75f),
+        modifier = modifier.aspectRatio(0.75f),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            // Le texte visible est remplacé par la description de la case pour TalkBack.
+            Text(
+                label,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
     }
 }

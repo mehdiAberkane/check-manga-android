@@ -5,6 +5,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 
 /**
  * Stocke la collection dans un petit fichier JSON privé à l'application.
@@ -24,10 +25,11 @@ class SeriesRepository(context: Context) {
         }
     }
 
+    /** @throws IOException si la collection n'a pas pu être écrite. */
     fun save(series: List<Series>) {
         val tmp = File(file.parentFile, "series.json.tmp")
         tmp.writeText(toJson(series))
-        tmp.renameTo(file)
+        if (!tmp.renameTo(file)) throw IOException("Impossible de remplacer ${file.name}")
     }
 
     companion object {
@@ -45,19 +47,32 @@ class SeriesRepository(context: Context) {
             return array.toString()
         }
 
-        /** @throws JSONException si le contenu n'est pas une collection valide. */
+        /**
+         * Les valeurs sont bornées : un total ou un numéro de tome énorme ferait construire
+         * une grille gigantesque, et des id en double feraient planter les listes Compose.
+         * @throws JSONException si le contenu n'est pas une collection valide.
+         */
         fun fromJson(text: String): List<Series> {
             val array = JSONArray(text)
-            return (0 until array.length()).map { i ->
+            if (array.length() > MAX_SERIES) throw JSONException("Trop de séries")
+            val series = (0 until array.length()).map { i ->
                 val o = array.getJSONObject(i)
+                val title = o.getString("title").trim()
+                if (title.isEmpty() || title.length > MAX_TITLE_LENGTH) throw JSONException("Titre invalide")
+                val total = if (o.has("total")) o.getInt("total") else null
+                if (total != null && total !in 1..MAX_VOLUME) throw JSONException("Total invalide")
                 val owned = o.getJSONArray("owned")
-                Series(
-                    id = o.getLong("id"),
-                    title = o.getString("title"),
-                    totalVolumes = if (o.has("total")) o.getInt("total") else null,
-                    ownedVolumes = (0 until owned.length()).map { owned.getInt(it) }.toSet(),
-                )
+                val volumes = (0 until owned.length()).map { owned.getInt(it) }.toSet()
+                if (volumes.any { it !in 1..MAX_VOLUME }) throw JSONException("Tome invalide")
+                Series(id = o.getLong("id"), title = title, totalVolumes = total, ownedVolumes = volumes)
             }
+            if (series.distinctBy { it.id }.size != series.size) throw JSONException("Identifiants en double")
+            return series
         }
+
+        const val MAX_SERIES = 5_000
+        const val MAX_TITLE_LENGTH = 200
+        /** Une vraie sauvegarde fait quelques dizaines de Ko. */
+        const val MAX_BACKUP_BYTES = 1_000_000
     }
 }

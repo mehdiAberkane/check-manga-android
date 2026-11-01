@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mangareminder.data.MAX_VOLUME
+import com.mangareminder.data.SeriesRepository
 import com.mangareminder.data.formatVolumes
 import com.mangareminder.data.parseVolumes
 
@@ -40,7 +41,7 @@ fun SeriesDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = { title = it.take(SeriesRepository.MAX_TITLE_LENGTH) },
                     label = { Text("Titre") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -112,6 +113,21 @@ fun ImportDialog(importedCount: Int, currentCount: Int, onDismiss: () -> Unit, o
         },
         confirmButton = { TextButton(onClick = onConfirm) { Text("Importer") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+    )
+}
+
+@Composable
+fun SaveErrorDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Enregistrement impossible") },
+        text = {
+            Text(
+                "Tes dernières modifications n'ont pas pu être enregistrées sur le téléphone " +
+                    "(stockage plein ?). Libère de la place, puis exporte ta collection pour ne rien perdre."
+            )
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
     )
 }
 

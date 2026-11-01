@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mangareminder.ui.SaveErrorDialog
 import com.mangareminder.ui.SeriesDetailScreen
 import com.mangareminder.ui.SeriesListScreen
 import com.mangareminder.ui.SeriesViewModel
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
     val series by viewModel.series.collectAsStateWithLifecycle()
+    val saveFailed by viewModel.saveFailed.collectAsStateWithLifecycle()
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
 
@@ -57,5 +59,9 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
                 selectedId = null
             },
         )
+    }
+
+    if (saveFailed) {
+        SaveErrorDialog(onDismiss = viewModel::dismissSaveError)
     }
 }
