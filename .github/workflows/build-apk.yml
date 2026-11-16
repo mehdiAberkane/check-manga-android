@@ -46,6 +46,9 @@ jobs:
           keyPassword=$KEY_PASSWORD
           PROPS
 
+      - name: Tests unitaires
+        run: ./gradlew --no-daemon testDebugUnitTest
+
       - name: Compiler
         run: |
           if [ -f keystore.properties ]; then

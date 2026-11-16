@@ -34,6 +34,9 @@ class MainActivity : ComponentActivity() {
 private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
     val series by viewModel.series.collectAsStateWithLifecycle()
     val saveFailed by viewModel.saveFailed.collectAsStateWithLifecycle()
+    val releases by viewModel.releases.collectAsStateWithLifecycle()
+    val checking by viewModel.checking.collectAsStateWithLifecycle()
+    val checkError by viewModel.checkError.collectAsStateWithLifecycle()
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
 
@@ -45,6 +48,8 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
             onExport = viewModel::exportTo,
             onReadBackup = viewModel::readBackup,
             onReplaceAll = viewModel::replaceAll,
+            releases = releases,
+            onCheckReleases = viewModel::checkReleasesNow,
         )
     } else {
         BackHandler { selectedId = null }
@@ -58,6 +63,11 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
                 viewModel.deleteSeries(selected.id)
                 selectedId = null
             },
+            releases = releases[selected.id],
+            checking = checking,
+            checkError = checkError,
+            onToggleWatch = { viewModel.toggleWatch(selected.id) },
+            onCheckNow = viewModel::checkReleasesNow,
         )
     }
 

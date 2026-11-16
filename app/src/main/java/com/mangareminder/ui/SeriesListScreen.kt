@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +50,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mangareminder.data.Series
 import com.mangareminder.data.formatVolumes
+import com.mangareminder.releases.Release
+import com.mangareminder.releases.SeriesReleases
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -60,6 +63,8 @@ fun SeriesListScreen(
     onExport: suspend (Uri) -> Boolean,
     onReadBackup: suspend (Uri) -> List<Series>?,
     onReplaceAll: (List<Series>) -> Unit,
+    releases: Map<Long, SeriesReleases>,
+    onCheckReleases: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -95,6 +100,15 @@ fun SeriesListScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "Plus d'options")
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Vérifier les sorties") },
+                            enabled = series.any { it.watched },
+                            onClick = {
+                                menuOpen = false
+                                onCheckReleases()
+                                scope.launch { snackbar.showSnackbar("Recherche des nouveaux tomes…") }
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text("Exporter la collection") },
                             enabled = series.isNotEmpty(),
@@ -150,7 +164,8 @@ fun SeriesListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(filtered, key = { it.id }) { s ->
-                        SeriesCard(s, onClick = { onOpen(s.id) })
+                        val newRelease = if (s.watched) releases[s.id]?.newRelease(s.lastKnownVolume) else null
+                        SeriesCard(s, newRelease, onClick = { onOpen(s.id) })
                     }
                 }
             }
@@ -184,7 +199,7 @@ fun SeriesListScreen(
 }
 
 @Composable
-private fun SeriesCard(series: Series, onClick: () -> Unit) {
+private fun SeriesCard(series: Series, newRelease: Release?, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -195,6 +210,14 @@ private fun SeriesCard(series: Series, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                if (series.watched) {
+                    Icon(
+                        Icons.Outlined.Notifications,
+                        contentDescription = "Sorties surveillées",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
                 if (series.isComplete) {
                     Text(
                         "Complète",
@@ -214,6 +237,14 @@ private fun SeriesCard(series: Series, onClick: () -> Unit) {
                 LinearProgressIndicator(
                     progress = { (series.ownedCount.toFloat() / total).coerceAtMost(1f) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+            newRelease?.let {
+                Text(
+                    "🆕 ${it.describe()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 6.dp),
                 )
             }
             val missing = series.missingVolumes

@@ -10,6 +10,13 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 - Nombre total de tomes optionnel (série en cours) : la case « + » marque le tome suivant.
 - Données stockées sur le téléphone (`series.json`), incluses dans la sauvegarde Android.
 - Export / import de la collection dans un fichier JSON (menu ⋮).
+- Surveillance des sorties : la cloche 🔔 d'une série lance la recherche des nouveaux tomes
+  (Google Books), deux fois par jour en arrière-plan, avec une notification quand un tome plus récent
+  que le dernier possédé (ou que le total indiqué) apparaît. « Vérifier les sorties » (menu ⋮) force
+  une recherche.
+
+  L'API Google Books est appelée sans clé : son quota est partagé, une vérification peut échouer
+  et sera retentée plus tard.
 
 ## Stack
 

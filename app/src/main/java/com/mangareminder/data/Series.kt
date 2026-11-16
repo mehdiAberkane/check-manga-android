@@ -6,10 +6,15 @@ data class Series(
     /** Nombre de tomes parus, ou null si la série est en cours / inconnue. */
     val totalVolumes: Int? = null,
     val ownedVolumes: Set<Int> = emptySet(),
+    /** Surveillance des sorties : l'app cherche régulièrement les nouveaux tomes. */
+    val watched: Boolean = false,
 ) {
     val ownedCount: Int get() = ownedVolumes.size
 
     val lastOwned: Int get() = ownedVolumes.maxOrNull() ?: 0
+
+    /** Dernier tome connu de l'utilisateur : possédé ou compté dans le total. */
+    val lastKnownVolume: Int get() = maxOf(lastOwned, totalVolumes ?: 0)
 
     val isComplete: Boolean
         get() = totalVolumes != null && (1..totalVolumes).all { it in ownedVolumes }
