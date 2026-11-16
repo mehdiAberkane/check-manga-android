@@ -21,8 +21,10 @@ android {
         applicationId = "com.mangareminder"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        // Sur GitHub Actions, chaque compilation a un numéro plus grand que la précédente :
+        // l'app peut ainsi détecter et installer les mises à jour publiées (voir AppUpdater).
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.let { 1000 + it } ?: 5
+        versionName = "1.4"
     }
 
     signingConfigs {

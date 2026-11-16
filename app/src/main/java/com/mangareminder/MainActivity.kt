@@ -16,7 +16,10 @@ import com.mangareminder.ui.SaveErrorDialog
 import com.mangareminder.ui.SeriesDetailScreen
 import com.mangareminder.ui.SeriesListScreen
 import com.mangareminder.ui.SeriesViewModel
+import com.mangareminder.ui.SettingsDialog
+import com.mangareminder.ui.UpdateDialog
 import com.mangareminder.ui.theme.MangaReminderTheme
+import com.mangareminder.update.UpdateViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,12 +34,18 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
+private fun MangaReminderApp(
+    viewModel: SeriesViewModel = viewModel(),
+    updateViewModel: UpdateViewModel = viewModel(),
+) {
     val series by viewModel.series.collectAsStateWithLifecycle()
     val saveFailed by viewModel.saveFailed.collectAsStateWithLifecycle()
     val releases by viewModel.releases.collectAsStateWithLifecycle()
     val checking by viewModel.checking.collectAsStateWithLifecycle()
     val checkError by viewModel.checkError.collectAsStateWithLifecycle()
+    val rssFeedUrl by viewModel.rssFeedUrl.collectAsStateWithLifecycle()
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
 
@@ -50,6 +59,8 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
             onReplaceAll = viewModel::replaceAll,
             releases = releases,
             onCheckReleases = viewModel::checkReleasesNow,
+            onOpenSettings = { showSettings = true },
+            onCheckUpdate = { updateViewModel.check(manual = true) },
         )
     } else {
         BackHandler { selectedId = null }
@@ -70,6 +81,25 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
             onCheckNow = viewModel::checkReleasesNow,
         )
     }
+
+    if (showSettings) {
+        SettingsDialog(
+            initialFeedUrl = rssFeedUrl,
+            version = updateViewModel.currentVersion,
+            onDismiss = { showSettings = false },
+            onSave = {
+                showSettings = false
+                viewModel.setRssFeedUrl(it)
+            },
+        )
+    }
+
+    UpdateDialog(
+        state = updateState,
+        onDownload = updateViewModel::download,
+        onInstall = { updateViewModel.install(it.apk) },
+        onDismiss = updateViewModel::dismiss,
+    )
 
     if (saveFailed) {
         SaveErrorDialog(onDismiss = viewModel::dismissSaveError)

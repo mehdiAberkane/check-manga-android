@@ -307,7 +307,9 @@ private fun ReleasesCard(
             releases?.let {
                 Text(
                     "Vérifié le ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.checkedAt))}" +
-                        " · source : Google Books",
+                        " · sources : Google Books" +
+                        it.releases.map { r -> r.source }.distinct().filter { s -> s != "Google Books" }
+                            .joinToString("") { s -> ", $s" },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

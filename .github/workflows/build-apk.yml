@@ -61,6 +61,12 @@ jobs:
           version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
           cp "$apk" manga-reminder.apk
           echo "VERSION=$version" >> "$GITHUB_ENV"
+          # Lu par l'app pour proposer la mise à jour (même calcul que versionCode dans app/build.gradle.kts).
+          # Seuls les APK signés avec la clé du projet peuvent s'installer par-dessus l'app.
+          signed=false; [ -f keystore.properties ] && signed=true
+          printf '{"versionCode":%d,"versionName":"%s","signed":%s,"commit":"%s"}\n' \
+            "$((1000 + GITHUB_RUN_NUMBER))" "$version" "$signed" "$GITHUB_SHA" > version.json
+          cat version.json
 
       - name: Nettoyer la clé
         if: always()
@@ -69,7 +75,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: manga-reminder-${{ env.VERSION }}
-          path: manga-reminder.apk
+          path: |
+            manga-reminder.apk
+            version.json
 
       # Chaque push sur main remplace la release « latest » : lien de téléchargement fixe
       # https://github.com/<owner>/<repo>/releases/download/latest/manga-reminder.apk
@@ -79,7 +87,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest manga-reminder.apk \
+          gh release create latest manga-reminder.apk version.json \
             --target "$GITHUB_SHA" \
             --title "Dernière version ($VERSION, ${GITHUB_SHA::7})" \
             --notes "APK compilé automatiquement depuis le commit $GITHUB_SHA."

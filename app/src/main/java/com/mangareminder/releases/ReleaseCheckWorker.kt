@@ -24,6 +24,7 @@ import com.mangareminder.MainActivity
 import com.mangareminder.R
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
+import com.mangareminder.data.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONException
@@ -41,49 +42,61 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
         if (watched.isEmpty()) return@withContext Result.success()
 
         ReleaseStore.setChecking(true)
+        val sources = buildSources(Settings(applicationContext).rssFeedUrl)
         val news = mutableListOf<Pair<Series, Release>>()
-        var failures = 0
+        val failedSources = mutableSetOf<String>()
+        var failedSeries = 0
         try {
             for (series in watched) {
-                val found = try {
-                    mergeReleases(SOURCES.flatMap { it.search(series.title) })
-                } catch (e: IOException) {
-                    failures++
-                    continue
-                } catch (e: JSONException) {
-                    failures++
+                var failuresForSeries = 0
+                val found = mutableListOf<Release>()
+                for (source in sources) {
+                    try {
+                        found += source.search(series.title)
+                    } catch (e: IOException) {
+                        failedSources += source.name
+                        failuresForSeries++
+                    } catch (e: JSONException) {
+                        failedSources += source.name
+                        failuresForSeries++
+                    }
+                }
+                if (failuresForSeries == sources.size) {
+                    failedSeries++
                     continue
                 }
                 val previous = ReleaseStore.get(series.id)
+                // Les flux RSS ne gardent que les dernières entrées : on cumule avec ce qui est connu.
+                val releases = mergeReleases(found + previous?.releases.orEmpty()).take(MAX_KEPT_RELEASES)
                 var notifiedMax = previous?.notifiedMax ?: 0
-                val latest = found.maxByOrNull { it.volume }
+                val latest = releases.maxByOrNull { it.volume }
                 if (latest != null && latest.volume > series.lastKnownVolume && latest.volume > notifiedMax) {
                     news += series to latest
                     notifiedMax = latest.volume
                 }
-                ReleaseStore.put(
-                    series.id,
-                    SeriesReleases(
-                        checkedAt = System.currentTimeMillis(),
-                        // Une recherche vide (quota, titre mal reconnu) n'efface pas les résultats connus.
-                        releases = found.ifEmpty { previous?.releases ?: emptyList() },
-                        notifiedMax = notifiedMax,
-                    ),
-                )
+                ReleaseStore.put(series.id, SeriesReleases(System.currentTimeMillis(), releases, notifiedMax))
             }
         } finally {
             ReleaseStore.setChecking(false)
         }
 
         ReleaseStore.setError(
-            if (failures > 0) "$failures série(s) non vérifiée(s) : Google Books n'a pas répondu (quota ?)." else null
+            if (failedSources.isEmpty()) null
+            else "Sans réponse : ${failedSources.joinToString()}. Nouvel essai à la prochaine vérification."
         )
         ReleaseNotifier.notify(applicationContext, news)
-        if (failures == watched.size) Result.retry() else Result.success()
+        if (failedSeries == watched.size) Result.retry() else Result.success()
     }
 
     companion object {
-        val SOURCES: List<ReleaseSource> = listOf(GoogleBooksSource)
+        private const val MAX_KEPT_RELEASES = 30
+
+        fun buildSources(rssFeedUrl: String): List<ReleaseSource> = buildList {
+            add(GoogleBooksSource)
+            if (rssFeedUrl.isNotBlank()) {
+                add(RssSource(rssFeedUrl, name = if ("manga-news" in rssFeedUrl) "manga-news" else "Flux RSS"))
+            }
+        }
     }
 }
 

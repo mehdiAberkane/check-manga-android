@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
+import com.mangareminder.data.Settings
 import com.mangareminder.releases.ReleaseScheduler
 import com.mangareminder.releases.ReleaseStore
 import com.mangareminder.releases.SeriesReleases
@@ -35,6 +36,17 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     init {
         ReleaseStore.init(app)
         ReleaseScheduler.sync(app, _series.value.any { it.watched })
+    }
+
+    private val settings = Settings(app)
+    private val _rssFeedUrl = MutableStateFlow(settings.rssFeedUrl)
+    val rssFeedUrl: StateFlow<String> = _rssFeedUrl.asStateFlow()
+
+    fun setRssFeedUrl(url: String) {
+        val changed = url.trim() != _rssFeedUrl.value
+        settings.rssFeedUrl = url
+        _rssFeedUrl.value = settings.rssFeedUrl
+        if (changed && url.isNotBlank()) checkReleasesNow()
     }
 
     /** Dernières sorties trouvées, par id de série. */

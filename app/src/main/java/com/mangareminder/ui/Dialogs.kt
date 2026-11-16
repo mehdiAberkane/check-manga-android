@@ -2,8 +2,10 @@ package com.mangareminder.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -13,13 +15,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.SeriesRepository
+import com.mangareminder.data.Settings
 import com.mangareminder.data.formatVolumes
 import com.mangareminder.data.parseVolumes
+import com.mangareminder.update.UpdateInfo
+import com.mangareminder.update.UpdateState
 
 @Composable
 fun SeriesDialog(
@@ -144,4 +150,109 @@ fun DeleteSeriesDialog(title: String, onDismiss: () -> Unit, onConfirm: () -> Un
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
     )
+}
+
+@Composable
+fun SettingsDialog(
+    initialFeedUrl: String,
+    version: String,
+    onDismiss: () -> Unit,
+    onSave: (feedUrl: String) -> Unit,
+) {
+    var feedUrl by rememberSaveable { mutableStateOf(initialFeedUrl) }
+    val valid = Settings.isValidFeedUrl(feedUrl)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Réglages") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = feedUrl,
+                    onValueChange = { feedUrl = it.trim().take(500) },
+                    label = { Text("Flux RSS des sorties") },
+                    placeholder = { Text("https://www.manga-news.com/…") },
+                    supportingText = {
+                        Text(
+                            if (valid) "Optionnel : flux RSS (manga-news…) consulté en plus de Google Books " +
+                                "pour les séries surveillées. Lien « Flux RSS » en bas du site."
+                            else "Adresse invalide : elle doit commencer par https://"
+                        )
+                    },
+                    isError = !valid,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                )
+                Text(
+                    "Manga Reminder $version",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(feedUrl) }, enabled = valid) { Text("Enregistrer") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+    )
+}
+
+/** Fenêtre de mise à jour : rien n'est affiché pour Idle. */
+@Composable
+fun UpdateDialog(
+    state: UpdateState,
+    onDownload: (UpdateInfo) -> Unit,
+    onInstall: (UpdateState.Ready) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    when (state) {
+        UpdateState.Idle -> Unit
+        UpdateState.Checking -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Mise à jour") },
+            text = { Text("Recherche d'une nouvelle version…") },
+            confirmButton = {},
+        )
+        UpdateState.UpToDate -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Mise à jour") },
+            text = { Text("Tu as déjà la dernière version.") },
+            confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
+        )
+        is UpdateState.Failed -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Mise à jour impossible") },
+            text = { Text(state.message) },
+            confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
+        )
+        is UpdateState.Available -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Nouvelle version ${state.info.versionName}") },
+            text = { Text("Une mise à jour de Manga Reminder est disponible sur GitHub. Ta collection est conservée.") },
+            confirmButton = { TextButton(onClick = { onDownload(state.info) }) { Text("Télécharger") } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Plus tard") } },
+        )
+        is UpdateState.Downloading -> AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Téléchargement…") },
+            text = {
+                val progress = state.progress
+                if (progress != null) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                else LinearProgressIndicator(Modifier.fillMaxWidth())
+            },
+            confirmButton = {},
+        )
+        is UpdateState.Ready -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Prête à installer") },
+            text = {
+                Text(
+                    "La version ${state.info.versionName} est téléchargée. Si Android le demande, autorise " +
+                        "Manga Reminder à installer des applications, puis reviens et appuie à nouveau sur Installer."
+                )
+            },
+            confirmButton = { TextButton(onClick = { onInstall(state) }) { Text("Installer") } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+        )
+    }
 }

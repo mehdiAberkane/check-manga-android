@@ -17,6 +17,12 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 
   L'API Google Books est appelée sans clé : son quota est partagé, une vérification peut échouer
   et sera retentée plus tard.
+- Flux RSS en plus de Google Books (manga-news…) : coller l'adresse du flux dans *⋮ > Réglages*.
+  Les entrées dont le titre contient le nom d'une série surveillée et un numéro de tome sont retenues.
+- Mise à jour depuis l'app : *⋮ > Rechercher une mise à jour* (et vérification automatique une fois
+  par jour). L'app lit `version.json` dans la release GitHub `latest`, télécharge l'APK, vérifie
+  qu'il s'agit bien d'une version plus récente de l'app puis ouvre l'installeur Android.
+  Ne fonctionne qu'avec les APK signés par la CI avec la clé du projet (voir *Signature*).
 
 ## Stack
 
@@ -69,6 +75,10 @@ Le workflow `.github/workflows/build-apk.yml` compile l'APK à chaque push, pull
 Sans configuration, le workflow produit un APK **debug**, signé avec une clé jetable différente à chaque
 compilation. Android refuse alors de l'installer par-dessus une version précédente : il faut désinstaller
 (donc exporter la collection avant).
+
+La mise à jour depuis l'app n'est proposée que pour un APK signé (`"signed": true` dans `version.json`).
+Le numéro de version (`versionCode`) vaut `1000 + numéro du run` sur GitHub Actions : chaque compilation
+est plus récente que la précédente.
 
 Pour obtenir des APK release installables en mise à jour, ajouter ces secrets dans
 *Settings > Secrets and variables > Actions* :
