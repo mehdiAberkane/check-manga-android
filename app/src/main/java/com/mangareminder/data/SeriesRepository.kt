@@ -42,6 +42,7 @@ class SeriesRepository(context: Context) {
                     put("title", s.title)
                     s.totalVolumes?.let { put("total", it) }
                     put("owned", JSONArray(s.ownedVolumes.sorted()))
+                    if (s.watched) put("watched", true)
                 })
             }
             return array.toString()
@@ -64,7 +65,13 @@ class SeriesRepository(context: Context) {
                 val owned = o.getJSONArray("owned")
                 val volumes = (0 until owned.length()).map { owned.getInt(it) }.toSet()
                 if (volumes.any { it !in 1..MAX_VOLUME }) throw JSONException("Tome invalide")
-                Series(id = o.getLong("id"), title = title, totalVolumes = total, ownedVolumes = volumes)
+                Series(
+                    id = o.getLong("id"),
+                    title = title,
+                    totalVolumes = total,
+                    ownedVolumes = volumes,
+                    watched = o.optBoolean("watched", false),
+                )
             }
             if (series.distinctBy { it.id }.size != series.size) throw JSONException("Identifiants en double")
             return series

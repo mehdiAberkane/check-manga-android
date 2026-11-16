@@ -6,6 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
+import com.mangareminder.releases.ReleaseScheduler
+import com.mangareminder.releases.ReleaseStore
+import com.mangareminder.releases.SeriesReleases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,35 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     private val _saveFailed = MutableStateFlow(false)
     /** Passe à true si une écriture échoue : les dernières modifications risquent d'être perdues. */
     val saveFailed: StateFlow<Boolean> = _saveFailed.asStateFlow()
+
+    init {
+        ReleaseStore.init(app)
+        ReleaseScheduler.sync(app, _series.value.any { it.watched })
+    }
+
+    /** Dernières sorties trouvées, par id de série. */
+    val releases: StateFlow<Map<Long, SeriesReleases>> = ReleaseStore.data
+    val checking: StateFlow<Boolean> = ReleaseStore.checking
+    val checkError: StateFlow<String?> = ReleaseStore.lastError
+
+    /** Active ou coupe la surveillance ; une activation lance une vérification immédiate. */
+    fun toggleWatch(id: Long) {
+        updateSeries(id) { it.copy(watched = !it.watched) }
+        val nowWatched = _series.value.find { it.id == id }?.watched == true
+        afterSave {
+            ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched })
+            if (nowWatched) ReleaseScheduler.checkNow(getApplication<Application>())
+        }
+    }
+
+    fun checkReleasesNow() {
+        afterSave { ReleaseScheduler.checkNow(getApplication<Application>()) }
+    }
+
+    /** La tâche de fond relit series.json : on attend que les écritures en cours soient faites. */
+    private fun afterSave(action: () -> Unit) {
+        saver.execute(action)
+    }
 
     fun dismissSaveError() {
         _saveFailed.value = false
@@ -91,7 +123,10 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         return out.toByteArray()
     }
 
-    fun replaceAll(series: List<Series>) = update { series }
+    fun replaceAll(series: List<Series>) {
+        update { series }
+        afterSave { ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched }) }
+    }
 
     private fun updateSeries(id: Long, transform: (Series) -> Series) = update { list ->
         list.map { if (it.id == id) transform(it) else it }

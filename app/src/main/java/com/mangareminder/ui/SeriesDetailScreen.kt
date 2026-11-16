@@ -2,7 +2,12 @@
 
 package com.mangareminder.ui
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,12 +25,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -38,6 +47,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -51,6 +62,10 @@ import androidx.compose.ui.unit.dp
 import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.formatVolumes
+import com.mangareminder.releases.ReleaseNotifier
+import com.mangareminder.releases.SeriesReleases
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun SeriesDetailScreen(
@@ -60,7 +75,18 @@ fun SeriesDetailScreen(
     onAddVolumes: (Set<Int>) -> Unit,
     onEdit: (title: String, totalVolumes: Int?) -> Unit,
     onDelete: () -> Unit,
+    releases: SeriesReleases?,
+    checking: Boolean,
+    checkError: String?,
+    onToggleWatch: () -> Unit,
+    onCheckNow: () -> Unit,
 ) {
+    val context = LocalContext.current
+    // Android 13+ : la permission de notifier est demandée quand on active la surveillance.
+    // Un refus n'empêche pas la surveillance : les sorties restent visibles dans l'app.
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
     var showEdit by rememberSaveable { mutableStateOf(false) }
     var showDelete by rememberSaveable { mutableStateOf(false) }
     var showAddVolumes by rememberSaveable { mutableStateOf(false) }
@@ -80,6 +106,20 @@ fun SeriesDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        if (!series.watched && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !ReleaseNotifier.canNotify(context)
+                        ) {
+                            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        onToggleWatch()
+                    }) {
+                        Icon(
+                            if (series.watched) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                            contentDescription = if (series.watched) "Arrêter la surveillance des sorties"
+                            else "Surveiller les sorties",
+                        )
+                    }
                     IconButton(onClick = { showEdit = true }) {
                         Icon(Icons.Default.Edit, contentDescription = "Modifier")
                     }
@@ -106,6 +146,11 @@ fun SeriesDetailScreen(
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SummaryCard(series)
+            }
+            if (series.watched) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ReleasesCard(series, releases, checking, checkError, onCheckNow)
+                }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
@@ -218,3 +263,61 @@ private fun VolumeTile(label: String, owned: Boolean, onClick: () -> Unit, modif
         }
     }
 }
+
+@Composable
+private fun ReleasesCard(
+    series: Series,
+    releases: SeriesReleases?,
+    checking: Boolean,
+    checkError: String?,
+    onCheckNow: () -> Unit,
+) {
+    val uriHandler = LocalUriHandler.current
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Sorties surveillées", style = MaterialTheme.typography.titleMedium)
+            if (checking) LinearProgressIndicator(Modifier.fillMaxWidth())
+            when {
+                releases == null -> Text(
+                    if (checking) "Recherche en cours…" else "Pas encore vérifié.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                releases.releases.isEmpty() -> Text(
+                    "Aucun tome trouvé pour ce titre. Vérifie qu'il est écrit comme sur la couverture.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                else -> releases.releases.take(MAX_SHOWN_RELEASES).forEach { release ->
+                    val isNew = release.volume > series.lastKnownVolume
+                    Text(
+                        (if (isNew) "🆕 " else "") + release.describe(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isNew) FontWeight.Bold else FontWeight.Normal,
+                        color = if (release.link != null) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = release.link?.let { link ->
+                            Modifier
+                                .clickable(role = Role.Button, onClickLabel = "Voir la fiche du livre") {
+                                    uriHandler.openUri(link)
+                                }
+                                .padding(vertical = 2.dp)
+                        } ?: Modifier,
+                    )
+                }
+            }
+            releases?.let {
+                Text(
+                    "Vérifié le ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.checkedAt))}" +
+                        " · source : Google Books",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            checkError?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+            OutlinedButton(onClick = onCheckNow, enabled = !checking) { Text("Vérifier maintenant") }
+        }
+    }
+}
+
+private const val MAX_SHOWN_RELEASES = 5
