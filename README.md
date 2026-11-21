@@ -62,6 +62,29 @@ puis :
 L'APK signé est dans `app/build/outputs/apk/release/app-release.apk`. Garder la clé `.jks` et son mot de passe
 en lieu sûr : sans eux, impossible de publier une mise à jour installable par-dessus.
 
+### Intégrité de Gradle et des dépendances
+
+- `gradle-wrapper.properties` contient `distributionSha256Sum` (somme officielle publiée sur gradle.org) :
+  une distribution Gradle modifiée est refusée. La CI valide aussi `gradle-wrapper.jar`
+  (`gradle/actions/wrapper-validation`).
+- `gradle/verification-metadata.xml` liste le SHA-256 de chaque dépendance : un artefact modifié fait
+  échouer la compilation.
+
+Après une mise à jour de dépendance ou de plugin, régénérer ce fichier :
+
+```bash
+./gradlew --write-verification-metadata sha256 lintDebug lintRelease testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease
+```
+
+`aapt2` est un artefact propre à chaque système : Gradle n'enregistre que celui de la machine. Ajouter à
+la main les variantes `-linux.jar` (utilisée par la CI) et `-osx.jar`, avec leur SHA-256, en vérifiant le
+fichier téléchargé contre le `.sha1` publié sur `https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/<version>/`.
+Relire le diff du fichier : chaque nouvelle entrée doit correspondre à une dépendance attendue.
+
+La CI peut aussi résoudre des fichiers que la compilation locale n'a pas téléchargés (ex. le `.module`
+de `junit-bom`) : le log indique alors « Dependency verification failed » avec le nom des fichiers, à
+ajouter de la même façon après vérification contre le `.sha1` du dépôt Maven.
+
 ## Compilation automatique (GitHub Actions)
 
 Le workflow `.github/workflows/build-apk.yml` compile l'APK à chaque push, pull request ou lancement manuel
