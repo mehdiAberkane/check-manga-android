@@ -59,10 +59,39 @@ en lieu sûr : sans eux, impossible de publier une mise à jour installable par-
 Le workflow `.github/workflows/build-apk.yml` compile l'APK à chaque push, pull request ou lancement manuel
 (onglet *Actions > Compilation APK > Run workflow*).
 
-- **Push sur `main`** : l'APK est publié dans la release `latest`, toujours au même lien (pratique depuis le téléphone) :
+- **Tag `vX.Y`** : **version stable**, release `vX.Y` avec `manga-reminder-X.Y.apk` et `version.json`,
+  marquée *Latest*. C'est elle que renvoie `GET /repos/mehdiAberkane/check-manga-android/releases/latest`.
+- **Push sur `main`** : **build de développement**, pre-release `latest` (jamais marquée *Latest*), remplacée
+  à chaque push, toujours au même lien :
   https://github.com/mehdiAberkane/check-manga-android/releases/download/latest/manga-reminder.apk
-- **Tag `v*`** (ex. `v1.3`) : release versionnée avec `manga-reminder-<version>.apk`.
-- **Pull request** : l'APK est disponible en artefact du run (onglet *Actions*).
+- **Pull request** : l'APK et `version.json` sont disponibles en artefact du run (onglet *Actions*).
+
+`version.json` décrit l'APK de la release :
+
+```json
+{ "versionCode": 5, "versionName": "1.4", "apk": "manga-reminder-1.4.apk", "sha256": "…", "commit": "…" }
+```
+
+### Publier une version stable
+
+1. Dans `app/build.gradle.kts`, augmenter `versionCode` (entier, +1) et `versionName` (ex. `1.4`).
+2. Faire fusionner ce changement dans `main`.
+3. Créer et pousser le tag `v<versionName>` sur `main`.
+
+PowerShell :
+
+```powershell
+git checkout main; git pull; git tag -a v1.4 -m "Manga Reminder 1.4"; if ($?) { git push origin v1.4 }
+```
+
+bash :
+
+```bash
+git checkout main && git pull && git tag -a v1.4 -m "Manga Reminder 1.4" && git push origin v1.4
+```
+
+Le workflow refuse de publier (et ne crée pas la release) si le tag ne vaut pas `v<versionName>`, ou si
+`versionCode` n'est pas supérieur à celui de la version stable précédente.
 
 ### Signature
 
