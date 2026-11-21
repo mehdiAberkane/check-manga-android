@@ -89,10 +89,15 @@ jobs:
             apk=app/build/outputs/apk/release/app-release.apk
             # Une mauvaise clé dans les secrets donnerait un APK impossible à installer
             # par-dessus la version du téléphone : on refuse de le publier.
+            # Le libellé du signataire varie selon la version de build-tools
+            # (« Signer #1 », « Signer (minSdkVersion=…) ») : on ne garde que l'empreinte,
+            # et il doit n'y en avoir qu'une.
             apksigner=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
-            cert=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+            certs=$("$apksigner" verify --print-certs "$apk")
+            cert=$(echo "$certs" | sed -n 's/.*certificate SHA-256 digest: //p' | sort -u)
             if [ "$cert" != "$RELEASE_CERT_SHA256" ]; then
-              echo "::error::APK signé avec un certificat inattendu ($cert)."
+              echo "$certs"
+              echo "::error::APK signé avec un certificat inattendu : ${cert:-aucune empreinte lue}."
               exit 1
             fi
           else
