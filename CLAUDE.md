@@ -10,7 +10,7 @@ Les tickets sont dans le tableau Todoom « Manga Reminder » (clé `MR`).
 
 1. **On ne fait que les tickets de la colonne « À faire ».** Ne jamais toucher aux autres colonnes (« Backlog », « En cours » d'un autre travail, « A verifier », « Terminé », « Give Up ») ni aux cartes qu'elles contiennent, même si on le demande en passant : le signaler à l'utilisateur.
 2. En commençant un ticket, le déplacer de « À faire » vers « En cours », avant de coder.
-3. Développer sur une branche dédiée, commiter, ouvrir la pull request vers `main` sur GitHub (c'est la « MR » dont parle l'utilisateur), puis activer sa fusion automatique (`gh pr merge <n> --auto --squash`) : GitHub la fusionne dès que la CI est verte, jamais avant. Tant que la fusion automatique n'est pas activée sur le dépôt (ticket MR-11), fusionner soi-même la pull request (`gh pr merge <n> --squash --delete-branch`), uniquement quand la CI est verte.
+3. Développer sur une branche dédiée, commiter, ouvrir la pull request vers `main` sur GitHub (c'est la « MR » dont parle l'utilisateur), puis activer sa fusion automatique (`gh pr merge <n> --auto --squash`) : `main` exige le check `build`, GitHub fusionne donc la pull request dès que la CI est verte, jamais avant, et supprime la branche.
 4. Une fois fusionnée : revenir sur `main` et la mettre à jour (`git checkout main` puis `git pull`), puis déplacer le ticket de « En cours » vers « A verifier ». L'agent n'est pas prévenu de la fusion : il vérifie l'état de la pull request au message suivant de l'utilisateur.
 5. « A verifier » → « Terminé » : **uniquement l'utilisateur**, qui teste lui-même.
 
