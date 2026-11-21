@@ -72,7 +72,18 @@ Le workflow `.github/workflows/build-apk.yml` compile l'APK à chaque push, pull
 - **Push sur `main`** : **build de développement**, pre-release `latest` (jamais marquée *Latest*), remplacée
   à chaque push, toujours au même lien :
   https://github.com/mehdiAberkane/check-manga-android/releases/download/latest/manga-reminder.apk
-- **Pull request** : l'APK et `version.json` sont disponibles en artefact du run (onglet *Actions*).
+- **Pull request** et lancement manuel : tests et APK **debug** en artefact du run (onglet *Actions*),
+  sans secret ni publication.
+
+Le workflow a deux jobs :
+
+- `build` (tous les événements) : tests unitaires et APK debug, en lecture seule, sans aucun secret.
+  C'est le check exigé par la protection de `main`.
+- `release` (push sur `main` ou tag `v*`, après `build`) : APK release signé et publication. Lui seul a le
+  droit d'écrire dans les releases et accède à la clé, via l'environnement protégé `release`.
+
+Les actions sont épinglées sur un SHA de commit ; Dependabot (`.github/dependabot.yml`) propose leurs
+mises à jour.
 
 `version.json` décrit l'APK de la release :
 
@@ -109,10 +120,11 @@ installables en mise à jour par-dessus la version du téléphone. Le workflow �
 - les secrets de signature manquent (il ne publie jamais d'APK debug) ;
 - l'APK est signé avec un autre certificat que celui attendu (`RELEASE_CERT_SHA256` dans le workflow).
 
-Les pull requests et les lancements manuels sans secrets produisent un APK **debug** (clé jetable, non
-installable par-dessus), uniquement en artefact.
+Les pull requests et les lancements manuels produisent un APK **debug** (clé jetable, non installable
+par-dessus), uniquement en artefact : ils n'ont jamais accès à la clé.
 
-Secrets à créer dans *Settings > Secrets and variables > Actions* :
+Secrets à créer dans l'environnement `release` (*Settings > Environments > release*), qui n'est
+accessible qu'à `main` et aux tags `v*` :
 
 | Secret              | Valeur                                        |
 |---------------------|-----------------------------------------------|
