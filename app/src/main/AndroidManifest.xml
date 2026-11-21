@@ -4,6 +4,8 @@
     <!-- Surveillance des sorties : recherche des nouveaux tomes et notification. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Mise à jour intégrée : installation de l'APK de la dernière release GitHub. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -22,6 +24,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Résultat des installations de mise à jour (appelé par PackageInstaller uniquement). -->
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

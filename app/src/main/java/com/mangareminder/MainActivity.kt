@@ -10,13 +10,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mangareminder.ui.SaveErrorDialog
 import com.mangareminder.ui.SeriesDetailScreen
 import com.mangareminder.ui.SeriesListScreen
 import com.mangareminder.ui.SeriesViewModel
+import com.mangareminder.ui.UpdateDialog
+import com.mangareminder.ui.UpdateViewModel
 import com.mangareminder.ui.theme.MangaReminderTheme
+import com.mangareminder.update.UpdateState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,12 +35,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
+private fun MangaReminderApp(
+    viewModel: SeriesViewModel = viewModel(),
+    updateViewModel: UpdateViewModel = viewModel(),
+) {
     val series by viewModel.series.collectAsStateWithLifecycle()
     val saveFailed by viewModel.saveFailed.collectAsStateWithLifecycle()
     val releases by viewModel.releases.collectAsStateWithLifecycle()
     val checking by viewModel.checking.collectAsStateWithLifecycle()
     val checkError by viewModel.checkError.collectAsStateWithLifecycle()
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
 
@@ -50,6 +59,7 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
             onReplaceAll = viewModel::replaceAll,
             releases = releases,
             onCheckReleases = viewModel::checkReleasesNow,
+            onCheckUpdate = updateViewModel::check,
         )
     } else {
         BackHandler { selectedId = null }
@@ -68,6 +78,15 @@ private fun MangaReminderApp(viewModel: SeriesViewModel = viewModel()) {
             checkError = checkError,
             onToggleWatch = { viewModel.toggleWatch(selected.id) },
             onCheckNow = viewModel::checkReleasesNow,
+        )
+    }
+
+    if (updateState != UpdateState.Idle) {
+        UpdateDialog(
+            state = updateState,
+            onInstall = updateViewModel::install,
+            onOpenPermission = { context.startActivity(updateViewModel.permissionSettings(it)) },
+            onDismiss = updateViewModel::dismiss,
         )
     }
 

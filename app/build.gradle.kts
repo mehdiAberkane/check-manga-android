@@ -21,8 +21,8 @@ android {
         applicationId = "com.mangareminder"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     signingConfigs {
@@ -51,6 +51,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -73,4 +74,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    // org.json d'android.jar n'est qu'un bouchon en tests JVM.
+    testImplementation("org.json:json:20240303")
 }

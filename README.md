@@ -17,6 +17,14 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 
   L'API Google Books est appelée sans clé : son quota est partagé, une vérification peut échouer
   et sera retentée plus tard.
+- Mise à jour intégrée (menu ⋮ > « Rechercher une mise à jour ») : l'app lit la dernière release
+  stable de GitHub, télécharge son APK et l'installe, sans perdre la collection. Avant l'installation,
+  elle vérifie la taille, le SHA-256 (`version.json` et l'empreinte calculée par GitHub), le nom du
+  paquet, le `versionCode` (jamais de retour en arrière) et le certificat, qui doit être celui de
+  l'app installée. Seuls les hôtes GitHub sont contactés, en HTTPS.
+
+  La première fois, Android demande d'autoriser l'app à installer des applications (« Installer des
+  applis inconnues »), puis confirme chaque mise à jour.
 
 ## Stack
 
