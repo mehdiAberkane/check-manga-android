@@ -22,6 +22,8 @@ jobs:
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      # Empreinte publique du certificat release (CN=Mehdi, O=Manga Reminder).
+      RELEASE_CERT_SHA256: df049f29f919327d1bf1c863d8782d3125a2e546745369e198bea2f08d110d5c
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +36,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       # Avec les secrets de signature : APK release signé avec ta clé (installable
-      # par-dessus les versions précédentes). Sinon : APK debug.
+      # par-dessus les versions précédentes). Sinon : APK debug, seulement pour les
+      # pull requests et les lancements manuels, qui ne publient rien.
+      - name: Exiger la clé de publication
+        if: github.event_name == 'push' && env.KEYSTORE_BASE64 == ''
+        run: |
+          echo "::error::Secrets de signature absents : un APK debug ne doit pas être publié (voir README, Signature)."
+          exit 1
+
       - name: Préparer la signature release
         if: env.KEYSTORE_BASE64 != ''
         run: |
@@ -54,6 +63,14 @@ jobs:
           if [ -f keystore.properties ]; then
             ./gradlew --no-daemon assembleRelease
             apk=app/build/outputs/apk/release/app-release.apk
+            # Une mauvaise clé dans les secrets donnerait un APK impossible à installer
+            # par-dessus la version du téléphone : on refuse de le publier.
+            apksigner=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+            cert=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+            if [ "$cert" != "$RELEASE_CERT_SHA256" ]; then
+              echo "::error::APK signé avec un certificat inattendu ($cert)."
+              exit 1
+            fi
           else
             ./gradlew --no-daemon assembleDebug
             apk=app/build/outputs/apk/debug/app-debug.apk
