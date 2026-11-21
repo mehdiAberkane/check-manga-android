@@ -65,6 +65,7 @@ fun SeriesListScreen(
     onReplaceAll: (List<Series>) -> Unit,
     releases: Map<Long, SeriesReleases>,
     onCheckReleases: () -> Unit,
+    onCheckUpdate: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -123,6 +124,13 @@ fun SeriesListScreen(
                                 menuOpen = false
                                 // Certains gestionnaires de fichiers ne typent pas les .json : on accepte tout et on valide à la lecture.
                                 importLauncher.launch(arrayOf("*/*"))
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Rechercher une mise à jour") },
+                            onClick = {
+                                menuOpen = false
+                                onCheckUpdate()
                             },
                         )
                     }
