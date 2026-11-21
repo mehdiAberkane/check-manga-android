@@ -8,7 +8,10 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 - Fiche d'une série : grille des tomes, un appui coche ou décoche un tome.
 - Ajout rapide de plusieurs tomes : `1-12, 15, 17`.
 - Nombre total de tomes optionnel (série en cours) : la case « + » marque le tome suivant.
-- Données stockées sur le téléphone (`series.json`), incluses dans la sauvegarde Android.
+- Données stockées sur le téléphone (`series.json`), incluses dans la sauvegarde Android (Google et
+  transfert vers un nouveau téléphone). Seule la collection est sauvegardée : pas les fichiers
+  temporaires, ni le cache des sorties (`releases.json`, reconstruit), ni un `series.json.corrupt` mis de
+  côté. Règles : `res/xml/data_extraction_rules.xml` (Android 12+) et `res/xml/backup_rules.xml` (8 à 11).
 - Export / import de la collection dans un fichier JSON (menu ⋮).
 - Surveillance des sorties : la cloche 🔔 d'une série lance la recherche des nouveaux tomes
   (Google Books), deux fois par jour en arrière-plan, avec une notification quand un tome plus récent
