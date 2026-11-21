@@ -44,6 +44,7 @@ Les seuls déplacements permis à l'agent : « À faire » → « En cours » �
 ./gradlew lintDebug testDebugUnitTest assembleDebug   # avant de pousser
 ```
 
+- Dépendances vérifiées par `gradle/verification-metadata.xml` : toute mise à jour de dépendance ou de plugin régénère ce fichier, avec les variantes Linux et macOS d'`aapt2` (procédure dans le README).
 - Tests unitaires dans `app/src/test` (JUnit 4). Toute logique pure modifiée ou ajoutée vient avec ses tests dans la même pull request.
 - CI : `.github/workflows/build-apk.yml` sur chaque pull request et sur `main`. Ne fusionner une pull request que si la CI est verte.
 - Chaque push sur `main` republie la release `latest` ; les tags `vX.Y` publient une release versionnée.
