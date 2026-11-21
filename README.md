@@ -66,12 +66,16 @@ Le workflow `.github/workflows/build-apk.yml` compile l'APK à chaque push, pull
 
 ### Signature
 
-Sans configuration, le workflow produit un APK **debug**, signé avec une clé jetable différente à chaque
-compilation. Android refuse alors de l'installer par-dessus une version précédente : il faut désinstaller
-(donc exporter la collection avant).
+Les APK publiés (push sur `main`, tags `v*`) sont toujours des APK **release** signés avec la clé de l'app,
+installables en mise à jour par-dessus la version du téléphone. Le workflow échoue si :
 
-Pour obtenir des APK release installables en mise à jour, ajouter ces secrets dans
-*Settings > Secrets and variables > Actions* :
+- les secrets de signature manquent (il ne publie jamais d'APK debug) ;
+- l'APK est signé avec un autre certificat que celui attendu (`RELEASE_CERT_SHA256` dans le workflow).
+
+Les pull requests et les lancements manuels sans secrets produisent un APK **debug** (clé jetable, non
+installable par-dessus), uniquement en artefact.
+
+Secrets à créer dans *Settings > Secrets and variables > Actions* :
 
 | Secret              | Valeur                                        |
 |---------------------|-----------------------------------------------|
