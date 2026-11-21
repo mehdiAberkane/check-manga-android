@@ -81,6 +81,10 @@ la main les variantes `-linux.jar` (utilisée par la CI) et `-osx.jar`, avec leu
 fichier téléchargé contre le `.sha1` publié sur `https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/<version>/`.
 Relire le diff du fichier : chaque nouvelle entrée doit correspondre à une dépendance attendue.
 
+La CI peut aussi résoudre des fichiers que la compilation locale n'a pas téléchargés (ex. le `.module`
+de `junit-bom`) : le log indique alors « Dependency verification failed » avec le nom des fichiers, à
+ajouter de la même façon après vérification contre le `.sha1` du dépôt Maven.
+
 ## Compilation automatique (GitHub Actions)
 
 Le workflow `.github/workflows/build-apk.yml` compile l'APK à chaque push, pull request ou lancement manuel
