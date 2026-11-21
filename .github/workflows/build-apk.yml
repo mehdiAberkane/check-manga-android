@@ -35,6 +35,30 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Une version publiée doit pouvoir être reconnue par l'app : tag = v<versionName>
+      # et versionCode strictement supérieur à celui de la version stable précédente.
+      - name: Contrôler la version du tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          code=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts)
+          if [ "$GITHUB_REF_NAME" != "v$name" ]; then
+            echo "::error::Le tag $GITHUB_REF_NAME ne correspond pas à versionName ($name) : attendu v$name."
+            exit 1
+          fi
+          previous=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)
+          if [ -n "$previous" ] && gh release download "$previous" --pattern version.json --output "$RUNNER_TEMP/previous.json" 2>/dev/null; then
+            previous_code=$(jq -r .versionCode "$RUNNER_TEMP/previous.json")
+            if [ "$code" -le "$previous_code" ]; then
+              echo "::error::versionCode $code doit être supérieur à celui de $previous ($previous_code)."
+              exit 1
+            fi
+          else
+            echo "Pas de version stable précédente avec version.json : contrôle du versionCode ignoré."
+          fi
+
       # Avec les secrets de signature : APK release signé avec ta clé (installable
       # par-dessus les versions précédentes). Sinon : APK debug, seulement pour les
       # pull requests et les lancements manuels, qui ne publient rien.
@@ -81,8 +105,24 @@ jobs:
             apk=app/build/outputs/apk/debug/app-debug.apk
           fi
           version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
-          cp "$apk" manga-reminder.apk
+          version_code=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts)
+          case "$GITHUB_REF" in
+            refs/tags/v*) apk_name="manga-reminder-$version.apk" ;;
+            *) apk_name="manga-reminder.apk" ;;
+          esac
+          cp "$apk" "$apk_name"
+          # version.json décrit l'APK de la release : l'app le lit pour savoir s'il existe
+          # une version plus récente et vérifier le fichier téléchargé.
+          jq -n \
+            --argjson versionCode "$version_code" \
+            --arg versionName "$version" \
+            --arg apk "$apk_name" \
+            --arg sha256 "$(sha256sum "$apk_name" | cut -d' ' -f1)" \
+            --arg commit "$GITHUB_SHA" \
+            '{versionCode: $versionCode, versionName: $versionName, apk: $apk, sha256: $sha256, commit: $commit}' \
+            > version.json
           echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "APK_NAME=$apk_name" >> "$GITHUB_ENV"
 
       - name: Nettoyer la clé
         if: always()
@@ -91,26 +131,32 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: manga-reminder-${{ env.VERSION }}
-          path: manga-reminder.apk
+          path: |
+            ${{ env.APK_NAME }}
+            version.json
 
-      # Chaque push sur main remplace la release « latest » : lien de téléchargement fixe
+      # Chaque push sur main remplace la pre-release « latest » (build de développement,
+      # jamais marquée comme dernière version) : lien de téléchargement fixe
       # https://github.com/<owner>/<repo>/releases/download/latest/manga-reminder.apk
-      - name: Publier la dernière version
+      - name: Publier la version de développement
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest manga-reminder.apk \
+          gh release create latest "$APK_NAME" version.json \
             --target "$GITHUB_SHA" \
-            --title "Dernière version ($VERSION, ${GITHUB_SHA::7})" \
-            --notes "APK compilé automatiquement depuis le commit $GITHUB_SHA."
+            --prerelease --latest=false \
+            --title "Développement ($VERSION, ${GITHUB_SHA::7})" \
+            --notes "Build de développement, compilé automatiquement depuis le commit $GITHUB_SHA."
 
+      # Les tags vX.Y sont les versions stables : la plus récente est la release « Latest »
+      # que l'app interroge (GET /repos/<owner>/<repo>/releases/latest).
       - name: Publier la version taguée
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp manga-reminder.apk "manga-reminder-$VERSION.apk"
-          gh release create "$GITHUB_REF_NAME" "manga-reminder-$VERSION.apk" \
+          gh release create "$GITHUB_REF_NAME" "$APK_NAME" version.json \
+            --latest \
             --title "Manga Reminder $GITHUB_REF_NAME" --generate-notes
