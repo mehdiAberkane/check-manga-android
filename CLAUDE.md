@@ -14,7 +14,9 @@ Les tickets sont dans le tableau Todoom « Manga Reminder » (clé `MR`).
 4. Une fois fusionnée : revenir sur `main` et la mettre à jour (`git checkout main` puis `git pull`), puis déplacer le ticket de « En cours » vers « A verifier ». L'agent n'est pas prévenu de la fusion : il vérifie l'état de la pull request au message suivant de l'utilisateur.
 5. « A verifier » → « Terminé » : **uniquement l'utilisateur**, qui teste lui-même.
 
-Les seuls déplacements permis à l'agent : « À faire » → « En cours » → « A verifier ». Si la pull request ne couvre qu'une partie d'un ticket, le dire et ne pas le déplacer vers « A verifier ». Le premier ticket d'une colonne est celui dont l'ordre est le plus bas. Déplacer les cartes avec les outils Todoom (`move_card`).
+Les seuls déplacements permis à l'agent : « À faire » → « En cours » → « A verifier ». Si la pull request ne couvre qu'une partie d'un ticket, le dire et ne pas le déplacer vers « A verifier ». Déplacer les cartes avec les outils Todoom (`move_card`).
+
+**Ordre** : prendre les tickets de « À faire » dans l'ordre de la colonne (le premier est celui dont l'ordre est le plus bas), sans en sauter. Une fois un ticket passé en « A verifier », enchaîner directement sur le suivant, sans redemander.
 
 ## Principes de l'application
 
