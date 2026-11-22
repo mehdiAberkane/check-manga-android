@@ -102,8 +102,36 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         }.isSuccess
     }
 
-    /** Lit un fichier exporté ; null s'il est illisible. N'applique rien. */
-    suspend fun readBackup(uri: Uri): List<Series>? = withContext(Dispatchers.IO) {
+    private val _pendingImport = MutableStateFlow<List<Series>?>(null)
+    /**
+     * Sauvegarde lue, en attente de confirmation. Gardée ici plutôt que dans l'écran : elle
+     * survit à une rotation ou à un changement de thème pendant que la confirmation est affichée.
+     */
+    val pendingImport: StateFlow<List<Series>?> = _pendingImport.asStateFlow()
+
+    /**
+     * Lit un fichier exporté et le met en attente de confirmation, sans rien appliquer.
+     * @return false si le fichier n'est pas une sauvegarde valide.
+     */
+    suspend fun readBackup(uri: Uri): Boolean {
+        val series = parseBackup(uri) ?: return false
+        _pendingImport.value = series
+        return true
+    }
+
+    /** Remplace la collection par la sauvegarde en attente ; renvoie le nombre de séries importées. */
+    fun confirmImport(): Int {
+        val series = _pendingImport.value ?: return 0
+        _pendingImport.value = null
+        replaceAll(series)
+        return series.size
+    }
+
+    fun cancelImport() {
+        _pendingImport.value = null
+    }
+
+    private suspend fun parseBackup(uri: Uri): List<Series>? = withContext(Dispatchers.IO) {
         runCatching {
             val resolver = getApplication<Application>().contentResolver
             val bytes = resolver.openInputStream(uri)!!.use { it.readAtMost(SeriesRepository.MAX_BACKUP_BYTES) }
@@ -124,7 +152,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         return out.toByteArray()
     }
 
-    fun replaceAll(series: List<Series>) {
+    private fun replaceAll(series: List<Series>) {
         update { series }
         afterSave { ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched }) }
     }
