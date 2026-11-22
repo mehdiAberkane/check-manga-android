@@ -103,6 +103,16 @@
     <string name="lent_volumes">Prêtés : %1$s</string>
     <string name="lent_volume_to">tome %1$d (%2$s)</string>
     <string name="filter_lent">Prêtés</string>
+    <string name="filter_all">Toutes</string>
+    <string name="filter_incomplete">Incomplètes</string>
+    <string name="filter_complete">Complètes</string>
+    <string name="filter_watched">Surveillées</string>
+    <string name="filter_new_release">Nouveautés</string>
+    <string name="sort_label">Tri : %1$s</string>
+    <string name="sort_title">Titre</string>
+    <string name="sort_added">Ajout récent</string>
+    <string name="sort_missing">Tomes manquants</string>
+    <string name="no_match_filter">Aucune série pour ce filtre.</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>

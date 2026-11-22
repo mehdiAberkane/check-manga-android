@@ -28,6 +28,11 @@ import java.time.LocalDate
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.Executors
+import android.content.Context
+import androidx.core.content.edit
+import com.mangareminder.data.ListFilter
+import com.mangareminder.data.ListSort
+import com.mangareminder.data.enumOrDefault
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = SeriesRepository(app)
@@ -107,6 +112,23 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     val backupStatus: StateFlow<BackupStatus> = AutoBackup.status
+
+    // Filtre et tri de la liste, mémorisés entre deux ouvertures de l'app (préférences privées).
+    private val listPrefs = app.getSharedPreferences("list", Context.MODE_PRIVATE)
+    private val _listFilter = MutableStateFlow(enumOrDefault(listPrefs.getString("filter", null), ListFilter.ALL))
+    val listFilter: StateFlow<ListFilter> = _listFilter.asStateFlow()
+    private val _listSort = MutableStateFlow(enumOrDefault(listPrefs.getString("sort", null), ListSort.TITLE))
+    val listSort: StateFlow<ListSort> = _listSort.asStateFlow()
+
+    fun setListFilter(filter: ListFilter) {
+        _listFilter.value = filter
+        listPrefs.edit { putString("filter", filter.name) }
+    }
+
+    fun setListSort(sort: ListSort) {
+        _listSort.value = sort
+        listPrefs.edit { putString("sort", sort.name) }
+    }
 
     /** @return false si le dossier choisi ne peut pas être gardé (accès refusé par Android). */
     fun enableBackup(folder: Uri): Boolean = runCatching {

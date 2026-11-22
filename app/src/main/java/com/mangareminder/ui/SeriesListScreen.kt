@@ -68,7 +68,9 @@ import com.mangareminder.data.volumeAnswers
 import com.mangareminder.data.VolumeAnswer
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
+import com.mangareminder.data.ListFilter
+import com.mangareminder.data.ListSort
+import com.mangareminder.data.applyListOptions
 
 @Composable
 fun SeriesListScreen(
@@ -88,8 +90,11 @@ fun SeriesListScreen(
     onDisableBackup: () -> Unit,
     onBackupNow: () -> Unit,
     onMarkOwned: (seriesId: Long, volume: Int) -> Unit,
+    listFilter: ListFilter,
+    listSort: ListSort,
+    onListFilter: (ListFilter) -> Unit,
+    onListSort: (ListSort) -> Unit,
 ) {
-    var onlyLent by rememberSaveable { mutableStateOf(false) }
     var showBackup by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -98,8 +103,10 @@ fun SeriesListScreen(
     // Textes des snackbars, lus hors composition (dans les callbacks).
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
-    val filtered = remember(series, query, onlyLent) {
-        searchResults(series, query).filter { !onlyLent || it.loans.isNotEmpty() }
+    val filtered = remember(series, query, listFilter, listSort, releases) {
+        applyListOptions(searchResults(series, query), listFilter, listSort) { s ->
+            releases[s.id]?.newRelease(s.lastKnownVolume) != null
+        }
     }
     // « one piece 45 » : réponse directe en haut de la liste (usage en magasin).
     val answers = remember(series, query) { volumeAnswers(series, query) }
@@ -208,17 +215,21 @@ fun SeriesListScreen(
                     singleLine = true,
                 )
             }
-            if (series.any { it.loans.isNotEmpty() }) {
-                FilterChip(
-                    selected = onlyLent,
-                    onClick = { onlyLent = !onlyLent },
-                    label = { Text(stringResource(R.string.filter_lent)) },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+            if (series.isNotEmpty()) {
+                ListOptionsRow(
+                    filter = listFilter,
+                    sort = listSort,
+                    showLent = listFilter == ListFilter.LENT || series.any { it.loans.isNotEmpty() },
+                    onFilter = onListFilter,
+                    onSort = onListSort,
                 )
             }
             when {
                 series.isEmpty() -> EmptyState(stringResource(R.string.empty_collection))
-                filtered.isEmpty() -> EmptyState(stringResource(R.string.no_match, query.trim()))
+                filtered.isEmpty() && answers.isEmpty() -> EmptyState(
+                    if (query.isBlank()) stringResource(R.string.no_match_filter)
+                    else stringResource(R.string.no_match, query.trim()),
+                )
                 else -> LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
