@@ -34,6 +34,7 @@ fun Release.sanitized(): Release? {
         source = cleanSource,
         date = date?.takeIf { it.matches(RELEASE_DATE) },
         link = link?.takeIf { isSafeLink(it) },
+        cover = cover?.takeIf { isSafeCoverUrl(it) },
     )
 }
 
@@ -62,6 +63,7 @@ fun releaseCacheToJson(data: Map<Long, SeriesReleases>): String {
                         r.date?.let { put("date", it) }
                         put("source", r.source)
                         r.link?.let { put("link", it) }
+                        r.cover?.let { put("cover", it) }
                     })
                 }
             })
@@ -90,6 +92,7 @@ fun releaseCacheFromJson(text: String): Map<Long, SeriesReleases> {
                 date = r.optString("date").takeIf { it.isNotEmpty() },
                 source = r.optString("source"),
                 link = r.optString("link").takeIf { it.isNotEmpty() },
+                cover = r.optString("cover").takeIf { it.isNotEmpty() },
             )
         }
         result[id] = SeriesReleases(o.optLong("checkedAt", 0), releases, o.optInt("notifiedMax", 0)).sanitized()

@@ -13,6 +13,8 @@ data class Release(
     val date: String?,
     val source: String,
     val link: String?,
+    /** Miniature de la couverture (https, Google Books), si la source en donne une. */
+    val cover: String? = null,
 ) {
     /** Vrai seulement pour une date complète postérieure à aujourd'hui. */
     fun isUpcoming(today: LocalDate = LocalDate.now()): Boolean =
