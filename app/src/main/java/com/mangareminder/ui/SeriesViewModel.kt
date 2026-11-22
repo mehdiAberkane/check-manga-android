@@ -33,6 +33,7 @@ import androidx.core.content.edit
 import com.mangareminder.data.ListFilter
 import com.mangareminder.data.ListSort
 import com.mangareminder.data.enumOrDefault
+import com.mangareminder.data.restoreSeries
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = SeriesRepository(app)
@@ -155,7 +156,30 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         it.copy(title = title, totalVolumes = totalVolumes)
     }
 
-    fun deleteSeries(id: Long) = update { list -> list.filterNot { it.id == id } }
+    private val _undo = MutableStateFlow<UndoAction?>(null)
+    /** Dernière suppression ou dernier import, annulable quelques secondes (message « Annuler »). */
+    val undo: StateFlow<UndoAction?> = _undo.asStateFlow()
+
+    fun deleteSeries(id: Long) {
+        val deleted = _series.value.find { it.id == id } ?: return
+        update { list -> list.filterNot { it.id == id } }
+        _undo.value = UndoAction.Deleted(deleted)
+    }
+
+    fun undo() {
+        when (val action = _undo.value) {
+            is UndoAction.Deleted -> update { restoreSeries(it, action.series) }
+            is UndoAction.Imported -> update { action.previous }
+            null -> return
+        }
+        _undo.value = null
+        afterSave { ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched }) }
+    }
+
+    /** Le message a disparu sans « Annuler » : on oublie l'état précédent. */
+    fun forgetUndo(action: UndoAction) {
+        if (_undo.value == action) _undo.value = null
+    }
 
     fun toggleVolume(id: Long, volume: Int) {
         // Hors bornes, la collection serait rejetée au prochain chargement.
@@ -205,11 +229,12 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Remplace la collection par la sauvegarde en attente ; renvoie le nombre de séries importées. */
-    fun confirmImport(): Int {
-        val series = _pendingImport.value ?: return 0
+    fun confirmImport() {
+        val series = _pendingImport.value ?: return
         _pendingImport.value = null
+        val previous = _series.value
         replaceAll(series)
-        return series.size
+        _undo.value = UndoAction.Imported(previous, series.size)
     }
 
     fun cancelImport() {
@@ -272,4 +297,10 @@ sealed interface CoverSearch {
     /** partial : Google Books n'a pas répondu, seules les couvertures déjà connues sont proposées. */
     data class Results(val choices: List<Release>, val partial: Boolean = false) : CoverSearch
     data object Failed : CoverSearch
+}
+
+sealed interface UndoAction {
+    data class Deleted(val series: Series) : UndoAction
+    /** previous : la collection remplacée par l'import. */
+    data class Imported(val previous: List<Series>, val count: Int) : UndoAction
 }

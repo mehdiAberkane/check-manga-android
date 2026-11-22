@@ -50,6 +50,7 @@ private fun MangaReminderApp(
     val backupStatus by viewModel.backupStatus.collectAsStateWithLifecycle()
     val listFilter by viewModel.listFilter.collectAsStateWithLifecycle()
     val listSort by viewModel.listSort.collectAsStateWithLifecycle()
+    val undo by viewModel.undo.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
@@ -76,6 +77,9 @@ private fun MangaReminderApp(
             listSort = listSort,
             onListFilter = viewModel::setListFilter,
             onListSort = viewModel::setListSort,
+            undo = undo,
+            onUndo = viewModel::undo,
+            onForgetUndo = viewModel::forgetUndo,
         )
     } else {
         BackHandler { selectedId = null }

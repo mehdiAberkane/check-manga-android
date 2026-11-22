@@ -19,7 +19,8 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   transfert vers un nouveau téléphone). Seule la collection est sauvegardée : pas les fichiers
   temporaires, ni le cache des sorties (`releases.json`, reconstruit), ni un `series.json.corrupt` mis de
   côté. Règles : `res/xml/data_extraction_rules.xml` (Android 12+) et `res/xml/backup_rules.xml` (8 à 11).
-- Export / import de la collection dans un fichier JSON (menu ⋮).
+- Export / import de la collection dans un fichier JSON (menu ⋮). Après un import ou la suppression d'une série,
+  un message « Annuler » permet de revenir en arrière pendant une dizaine de secondes.
 - Sauvegarde automatique (menu ⋮) : on choisit une fois un dossier (téléphone, Google Drive…) et
   l'app y écrit la collection une trentaine de secondes après chaque modification. Un fichier par jour
   (`manga-reminder-AAAA-MM-JJ.json`, même format que l'export), les 7 derniers sont gardés ; aucun autre
