@@ -11,6 +11,7 @@ import android.provider.Settings
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.net.toUri
 import com.mangareminder.BuildConfig
+import com.mangareminder.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -35,10 +36,10 @@ class Updater(context: Context) {
         val release = try {
             parseLatestRelease(readText(LATEST_RELEASE_URL, 1_000_000))
         } catch (e: HttpStatusException) {
-            if (e.code == 404) throw UpdateException("Aucune version publiée sur GitHub.") else throw e
+            if (e.code == 404) throw UpdateException(R.string.update_err_no_release) else throw e
         }
         val versionJson = release.assets.find { it.name == "version.json" }
-            ?: throw UpdateException("La release ${release.tag} n'a pas de version.json.")
+            ?: throw UpdateException(R.string.update_err_no_version_json, release.tag)
         val info = parseUpdate(release, readText(versionJson.url, 64 * 1024))
         info.takeIf { it.versionCode > BuildConfig.VERSION_CODE }
     }
@@ -55,9 +56,9 @@ class Updater(context: Context) {
         apkFile.parentFile!!.mkdirs()
         try {
             val sha256 = downloadTo(info.apk.url, apkFile, info.apk.size, onProgress)
-            if (apkFile.length() != info.apk.size) throw UpdateException("Téléchargement incomplet.")
+            if (apkFile.length() != info.apk.size) throw UpdateException(R.string.update_err_incomplete)
             if (sha256 != info.sha256) {
-                throw UpdateException("Fichier corrompu : son empreinte SHA-256 ne correspond pas à la release.")
+                throw UpdateException(R.string.update_err_corrupt)
             }
             verifyPackage(apkFile, info)
             apkFile
@@ -116,19 +117,19 @@ class Updater(context: Context) {
     private fun verifyPackage(apk: File, info: UpdateInfo) {
         val pm = context.packageManager
         val archive = pm.getPackageArchiveInfo(apk.path, signingFlags())
-            ?: throw UpdateException("Le fichier téléchargé n'est pas un APK valide.")
+            ?: throw UpdateException(R.string.update_err_not_apk)
         if (archive.packageName != context.packageName) {
-            throw UpdateException("Cet APK n'est pas Manga Reminder.")
+            throw UpdateException(R.string.update_err_wrong_package)
         }
         val archiveCode = PackageInfoCompat.getLongVersionCode(archive)
         if (archiveCode != info.versionCode.toLong() || archiveCode <= BuildConfig.VERSION_CODE) {
-            throw UpdateException("La version de l'APK ne correspond pas à la release.")
+            throw UpdateException(R.string.update_err_version_mismatch)
         }
         val installed = signerDigests(pm.getPackageInfo(context.packageName, signingFlags()))
         val downloaded = signerDigests(archive)
-        if (downloaded.isEmpty()) throw UpdateException("Impossible de lire la signature de l'APK.")
+        if (downloaded.isEmpty()) throw UpdateException(R.string.update_err_signature_unreadable)
         if (downloaded != installed) {
-            throw UpdateException("APK refusé : il n'est pas signé avec la clé de l'application.")
+            throw UpdateException(R.string.update_err_wrong_signature)
         }
     }
 
@@ -171,7 +172,7 @@ class Updater(context: Context) {
         try {
             val length = connection.contentLengthLong
             if (length > MAX_APK_BYTES || (length >= 0 && length != expectedSize)) {
-                throw UpdateException("Taille de l'APK inattendue.")
+                throw UpdateException(R.string.update_err_unexpected_size)
             }
             val digest = MessageDigest.getInstance("SHA-256")
             var total = 0L
@@ -183,7 +184,7 @@ class Updater(context: Context) {
                         val n = input.read(buffer)
                         if (n == -1) break
                         total += n
-                        if (total > expectedSize) throw UpdateException("Taille de l'APK inattendue.")
+                        if (total > expectedSize) throw UpdateException(R.string.update_err_unexpected_size)
                         digest.update(buffer, 0, n)
                         output.write(buffer, 0, n)
                         onProgress(total.toFloat() / expectedSize)
@@ -200,7 +201,7 @@ class Updater(context: Context) {
     private fun open(url: String): HttpURLConnection {
         var current = url
         repeat(MAX_REDIRECTS + 1) {
-            if (!isAllowedUrl(current)) throw UpdateException("Adresse de téléchargement refusée.")
+            if (!isAllowedUrl(current)) throw UpdateException(R.string.update_err_url_refused)
             val connection = URL(current).openConnection() as HttpURLConnection
             connection.instanceFollowRedirects = false
             connection.connectTimeout = 15_000

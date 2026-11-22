@@ -55,6 +55,10 @@ import com.mangareminder.releases.Release
 import com.mangareminder.releases.SeriesReleases
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.ui.res.stringResource
+import com.mangareminder.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalResources
 
 @Composable
 fun SeriesListScreen(
@@ -74,6 +78,8 @@ fun SeriesListScreen(
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // Textes des snackbars, lus hors composition (dans les callbacks).
+    val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
     val filtered = remember(series, query) {
         series.filter { matchesSearch(it.title, query) }
@@ -83,35 +89,35 @@ fun SeriesListScreen(
         ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri != null) scope.launch {
-            snackbar.showSnackbar(if (onExport(uri)) "Collection exportée" else "Échec de l'export")
+            snackbar.showSnackbar(resources.getString(if (onExport(uri)) R.string.export_done else R.string.export_failed))
         }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
-            if (!onReadBackup(uri)) snackbar.showSnackbar("Ce fichier n'est pas une sauvegarde Manga Reminder")
+            if (!onReadBackup(uri)) snackbar.showSnackbar(resources.getString(R.string.import_invalid))
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manga Reminder") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Plus d'options")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text("Vérifier les sorties") },
+                            text = { Text(stringResource(R.string.menu_check_releases)) },
                             enabled = series.any { it.watched },
                             onClick = {
                                 menuOpen = false
                                 onCheckReleases()
-                                scope.launch { snackbar.showSnackbar("Recherche des nouveaux tomes…") }
+                                scope.launch { snackbar.showSnackbar(resources.getString(R.string.checking_releases)) }
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Exporter la collection") },
+                            text = { Text(stringResource(R.string.menu_export)) },
                             enabled = series.isNotEmpty(),
                             onClick = {
                                 menuOpen = false
@@ -119,7 +125,7 @@ fun SeriesListScreen(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Importer une sauvegarde") },
+                            text = { Text(stringResource(R.string.menu_import)) },
                             onClick = {
                                 menuOpen = false
                                 // Certains gestionnaires de fichiers ne typent pas les .json : on accepte tout et on valide à la lecture.
@@ -127,7 +133,7 @@ fun SeriesListScreen(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Rechercher une mise à jour") },
+                            text = { Text(stringResource(R.string.menu_check_update)) },
                             onClick = {
                                 menuOpen = false
                                 onCheckUpdate()
@@ -142,7 +148,7 @@ fun SeriesListScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Nouvelle série") },
+                text = { Text(stringResource(R.string.new_series)) },
             )
         },
     ) { padding ->
@@ -152,12 +158,12 @@ fun SeriesListScreen(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Rechercher une série") },
+                    placeholder = { Text(stringResource(R.string.search_placeholder)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Effacer")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear))
                             }
                         }
                     },
@@ -165,8 +171,8 @@ fun SeriesListScreen(
                 )
             }
             when {
-                series.isEmpty() -> EmptyState("Aucune série pour l'instant.\nAjoute ta première série avec le bouton en bas.")
-                filtered.isEmpty() -> EmptyState("Aucune série ne correspond à « ${query.trim()} ».")
+                series.isEmpty() -> EmptyState(stringResource(R.string.empty_collection))
+                filtered.isEmpty() -> EmptyState(stringResource(R.string.no_match, query.trim()))
                 else -> LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -182,7 +188,7 @@ fun SeriesListScreen(
 
     if (showAdd) {
         SeriesDialog(
-            heading = "Nouvelle série",
+            heading = stringResource(R.string.new_series),
             initialTitle = "",
             initialTotal = null,
             onDismiss = { showAdd = false },
@@ -199,7 +205,7 @@ fun SeriesListScreen(
             onDismiss = onCancelImport,
             onConfirm = {
                 val count = onConfirmImport()
-                scope.launch { snackbar.showSnackbar("$count série(s) importée(s)") }
+                scope.launch { snackbar.showSnackbar(resources.getQuantityString(R.plurals.series_imported, count, count)) }
             },
         )
     }
@@ -220,14 +226,14 @@ private fun SeriesCard(series: Series, newRelease: Release?, onClick: () -> Unit
                 if (series.watched) {
                     Icon(
                         Icons.Outlined.Notifications,
-                        contentDescription = "Sorties surveillées",
+                        contentDescription = stringResource(R.string.watched_releases),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 8.dp),
                     )
                 }
                 if (series.isComplete) {
                     Text(
-                        "Complète",
+                        stringResource(R.string.complete_badge),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 8.dp),
@@ -248,7 +254,7 @@ private fun SeriesCard(series: Series, newRelease: Release?, onClick: () -> Unit
             }
             newRelease?.let {
                 Text(
-                    "🆕 ${it.describe()}",
+                    stringResource(R.string.new_release, it.describe().text()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 6.dp),
@@ -257,7 +263,7 @@ private fun SeriesCard(series: Series, newRelease: Release?, onClick: () -> Unit
             val missing = series.missingVolumes
             if (missing.isNotEmpty()) {
                 Text(
-                    "Manquants : ${formatVolumes(missing)}",
+                    stringResource(R.string.missing_volumes, formatVolumes(missing)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     maxLines = 2,
@@ -269,13 +275,15 @@ private fun SeriesCard(series: Series, newRelease: Release?, onClick: () -> Unit
     }
 }
 
+/** « 3 / 30 tomes », « 4 tomes · dernier : 6 » ou « Aucun tome » ; l'accord suit le nombre affiché. */
+@Composable
 fun ownedSummary(series: Series): String {
     val count = series.ownedCount
-    val tomes = if (count > 1) "tomes" else "tome"
+    val total = series.totalVolumes
     return when {
-        series.totalVolumes != null -> "$count / ${series.totalVolumes} $tomes"
-        count == 0 -> "Aucun tome"
-        else -> "$count $tomes · dernier : ${series.lastOwned}"
+        total != null -> pluralStringResource(R.plurals.owned_of_total, total, count, total)
+        count == 0 -> stringResource(R.string.no_volume)
+        else -> pluralStringResource(R.plurals.owned_last, count, count, series.lastOwned)
     }
 }
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  La CI échoue sur tout avertissement Lint (warningsAsErrors dans app/build.gradle.kts).
+  Sont ignorés ici les contrôles qui dépendent de la date et non du code : ils signalent
+  qu'une nouvelle version existe, ce que Dependabot propose déjà chaque semaine.
+-->
+<lint>
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <!-- targetSdk suit une décision explicite (Android 16, MR-10), pas la dernière API sortie. -->
+    <issue id="OldTargetApi" severity="ignore" />
+</lint>

@@ -1,5 +1,7 @@
 package com.mangareminder.releases
 
+import com.mangareminder.R
+import com.mangareminder.UiMessage
 import java.text.Normalizer
 import java.time.LocalDate
 
@@ -16,10 +18,11 @@ data class Release(
     fun isUpcoming(today: LocalDate = LocalDate.now()): Boolean =
         date != null && date.length == 10 && date > today.toString()
 
-    fun describe(today: LocalDate = LocalDate.now()): String {
-        val formatted = formatReleaseDate(date) ?: return "Tome $volume"
-        return if (isUpcoming(today)) "Tome $volume · à paraître le $formatted"
-        else "Tome $volume · paru le $formatted"
+    /** « Tome 12 · paru le 05/12/2026 », résolu à l'affichage (strings.xml). */
+    fun describe(today: LocalDate = LocalDate.now()): UiMessage {
+        val formatted = formatReleaseDate(date) ?: return UiMessage(R.string.release_volume, volume)
+        return if (isUpcoming(today)) UiMessage(R.string.release_upcoming, volume, formatted)
+        else UiMessage(R.string.release_published, volume, formatted)
     }
 }
 

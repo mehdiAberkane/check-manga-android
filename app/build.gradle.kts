@@ -54,6 +54,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    lint {
+        // Tout avertissement fait échouer la compilation (CI comprise) ; exceptions dans app/lint.xml.
+        warningsAsErrors = true
+        abortOnError = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

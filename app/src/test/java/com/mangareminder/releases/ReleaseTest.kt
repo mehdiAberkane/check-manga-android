@@ -1,5 +1,7 @@
 package com.mangareminder.releases
 
+import com.mangareminder.R
+import com.mangareminder.UiMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -55,8 +57,9 @@ class ReleaseTest {
         val past = Release(105, "One Piece 105", "2026-07-02", "test", null)
         assertTrue(upcoming.isUpcoming(today))
         assertFalse(past.isUpcoming(today))
-        assertEquals("Tome 106 · à paraître le 05/12/2026", upcoming.describe(today))
-        assertEquals("Tome 105 · paru le 02/07/2026", past.describe(today))
+        assertEquals(UiMessage(R.string.release_upcoming, 106, "05/12/2026"), upcoming.describe(today))
+        assertEquals(UiMessage(R.string.release_published, 105, "02/07/2026"), past.describe(today))
+        assertEquals(UiMessage(R.string.release_volume, 7), Release(7, "t", null, "test", null).describe(today))
     }
 
     @Test

@@ -24,7 +24,7 @@ Les seuls déplacements permis à l'agent : « À faire » → « En cours » �
 - **Format de `series.json`** : c'est aussi le format de l'export / import. Un nouveau champ est facultatif à la lecture (valeur par défaut s'il manque), pour relire les anciennes sauvegardes.
 - **Données importées = données non fiables** : toute valeur lue (`SeriesRepository.fromJson`, cache `releases.json`, réponses réseau) est bornée avant usage (tomes 1..999, longueur des titres, id uniques, taille des fichiers).
 - **Réseau** : HTTPS uniquement, taille de réponse limitée, aucun jeton ni secret dans l'application (le dépôt et l'APK sont publics).
-- Textes de l'interface en français.
+- Textes de l'interface en français, tous dans `res/values/strings.xml` (`plurals` pour les nombres : en français, 0 et 1 sont au singulier). Un texte produit hors d'un écran (mise à jour, sorties) passe par `UiMessage`, résolu à l'affichage.
 
 ## Compiler
 
@@ -43,6 +43,8 @@ Les seuls déplacements permis à l'agent : « À faire » → « En cours » �
 ```bash
 ./gradlew lintDebug testDebugUnitTest assembleDebug   # avant de pousser
 ```
+
+- Lint fait échouer la compilation et la CI sur tout avertissement (`warningsAsErrors`). Les seules exceptions, liées à la date (nouvelles versions disponibles), sont dans `app/lint.xml`.
 
 - Versions des plugins et bibliothèques dans `gradle/libs.versions.toml`. Les PR Dependabot `gradle` échouent en CI tant que `verification-metadata.xml` n'est pas régénéré : le faire sur leur branche.
 - Dépendances vérifiées par `gradle/verification-metadata.xml` : toute mise à jour de dépendance ou de plugin régénère ce fichier, avec les variantes Linux et macOS d'`aapt2` (procédure dans le README).

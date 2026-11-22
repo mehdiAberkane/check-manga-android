@@ -66,6 +66,9 @@ import com.mangareminder.releases.ReleaseNotifier
 import com.mangareminder.releases.SeriesReleases
 import java.text.DateFormat
 import java.util.Date
+import androidx.compose.ui.res.stringResource
+import com.mangareminder.R
+import com.mangareminder.releases.GoogleBooksSource
 
 @Composable
 fun SeriesDetailScreen(
@@ -102,7 +105,7 @@ fun SeriesDetailScreen(
                 title = { Text(series.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -116,15 +119,16 @@ fun SeriesDetailScreen(
                     }) {
                         Icon(
                             if (series.watched) Icons.Filled.Notifications else Icons.Outlined.Notifications,
-                            contentDescription = if (series.watched) "Arrêter la surveillance des sorties"
-                            else "Surveiller les sorties",
+                            contentDescription = stringResource(
+                                if (series.watched) R.string.watch_stop else R.string.watch_start,
+                            ),
                         )
                     }
                     IconButton(onClick = { showEdit = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Modifier")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
                     }
                     IconButton(onClick = { showDelete = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Supprimer")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                     }
                 },
             )
@@ -133,7 +137,7 @@ fun SeriesDetailScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAddVolumes = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Ajouter des tomes") },
+                text = { Text(stringResource(R.string.add_volumes_title)) },
             )
         },
     ) { padding ->
@@ -154,7 +158,7 @@ fun SeriesDetailScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "Touche un tome pour le cocher ou le décocher.",
+                    stringResource(R.string.tap_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -162,12 +166,13 @@ fun SeriesDetailScreen(
             }
             items((1..gridSize).toList(), key = { it }) { volume ->
                 val owned = volume in series.ownedVolumes
+                val description = stringResource(R.string.volume_n, volume)
                 VolumeTile(
                     label = "$volume",
                     owned = owned,
                     onClick = { onToggleVolume(volume) },
                     modifier = Modifier.semantics {
-                        contentDescription = "Tome $volume"
+                        contentDescription = description
                         role = Role.Checkbox
                         toggleableState = ToggleableState(owned)
                     },
@@ -175,12 +180,13 @@ fun SeriesDetailScreen(
             }
             if (showNextTile) {
                 item(key = "next") {
+                    val description = stringResource(R.string.have_next_volume, gridSize + 1)
                     VolumeTile(
                         label = "+",
                         owned = false,
                         onClick = { onToggleVolume(gridSize + 1) },
                         modifier = Modifier.semantics {
-                            contentDescription = "J'ai le tome ${gridSize + 1}"
+                            contentDescription = description
                             role = Role.Button
                         },
                     )
@@ -191,7 +197,7 @@ fun SeriesDetailScreen(
 
     if (showEdit) {
         SeriesDialog(
-            heading = "Modifier la série",
+            heading = stringResource(R.string.edit_series),
             initialTitle = series.title,
             initialTotal = series.totalVolumes,
             onDismiss = { showEdit = false },
@@ -232,10 +238,10 @@ private fun SummaryCard(series: Series) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(ownedSummary(series), style = MaterialTheme.typography.titleMedium)
             when {
-                series.isComplete -> Text("Série complète 🎉")
-                missing.isNotEmpty() -> Text("Manquants : ${formatVolumes(missing)}")
+                series.isComplete -> Text(stringResource(R.string.series_complete))
+                missing.isNotEmpty() -> Text(stringResource(R.string.missing_volumes, formatVolumes(missing)))
                 series.totalVolumes == null && series.ownedCount > 0 ->
-                    Text("Prochain à acheter : tome ${series.lastOwned + 1}")
+                    Text(stringResource(R.string.next_to_buy, series.lastOwned + 1))
             }
         }
     }
@@ -275,28 +281,28 @@ private fun ReleasesCard(
     val uriHandler = LocalUriHandler.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Sorties surveillées", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.watched_releases), style = MaterialTheme.typography.titleMedium)
             if (checking) LinearProgressIndicator(Modifier.fillMaxWidth())
             when {
                 releases == null -> Text(
-                    if (checking) "Recherche en cours…" else "Pas encore vérifié.",
+                    stringResource(if (checking) R.string.checking else R.string.not_checked),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 releases.releases.isEmpty() -> Text(
-                    "Aucun tome trouvé pour ce titre. Vérifie qu'il est écrit comme sur la couverture.",
+                    stringResource(R.string.no_release_found),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 else -> releases.releases.take(MAX_SHOWN_RELEASES).forEach { release ->
                     val isNew = release.volume > series.lastKnownVolume
                     Text(
-                        (if (isNew) "🆕 " else "") + release.describe(),
+                        release.describe().text().let { if (isNew) stringResource(R.string.new_release, it) else it },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (isNew) FontWeight.Bold else FontWeight.Normal,
                         color = if (release.link != null) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurface,
                         modifier = release.link?.let { link ->
                             Modifier
-                                .clickable(role = Role.Button, onClickLabel = "Voir la fiche du livre") {
+                                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.open_book)) {
                                     uriHandler.openUri(link)
                                 }
                                 .padding(vertical = 2.dp)
@@ -306,8 +312,11 @@ private fun ReleasesCard(
             }
             releases?.let {
                 Text(
-                    "Vérifié le ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.checkedAt))}" +
-                        " · source : Google Books",
+                    stringResource(
+                        R.string.checked_at,
+                        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it.checkedAt)),
+                        GoogleBooksSource.name,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -315,7 +324,7 @@ private fun ReleasesCard(
             checkError?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
-            OutlinedButton(onClick = onCheckNow, enabled = !checking) { Text("Vérifier maintenant") }
+            OutlinedButton(onClick = onCheckNow, enabled = !checking) { Text(stringResource(R.string.action_check_now)) }
         }
     }
 }

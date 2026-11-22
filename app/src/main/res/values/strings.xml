@@ -1,4 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<!-- Textes de l'interface (français). Les nombres passent par des plurals : en français, 0 et 1 sont au singulier. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Manga Reminder</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="action_add">Ajouter</string>
+    <string name="action_import">Importer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_ok">OK</string>
+    <string name="action_later">Plus tard</string>
+    <string name="action_update">Mettre à jour</string>
+    <string name="action_open_settings">Ouvrir les réglages</string>
+    <string name="action_check_now">Vérifier maintenant</string>
+    <string name="action_back">Retour</string>
+    <string name="action_edit">Modifier</string>
+    <string name="action_clear">Effacer</string>
+    <string name="more_options">Plus d\'options</string>
+    <string name="export_done">Collection exportée</string>
+    <string name="export_failed">Échec de l\'export</string>
+    <string name="import_invalid">Ce fichier n\'est pas une sauvegarde Manga Reminder</string>
+    <string name="menu_check_releases">Vérifier les sorties</string>
+    <string name="checking_releases">Recherche des nouveaux tomes…</string>
+    <string name="menu_export">Exporter la collection</string>
+    <string name="menu_import">Importer une sauvegarde</string>
+    <string name="menu_check_update">Rechercher une mise à jour</string>
+    <string name="new_series">Nouvelle série</string>
+    <string name="search_placeholder">Rechercher une série</string>
+    <string name="empty_collection">Aucune série pour l\'instant.\nAjoute ta première série avec le bouton en bas.</string>
+    <string name="no_match">Aucune série ne correspond à « %1$s ».</string>
+    <string name="watched_releases">Sorties surveillées</string>
+    <string name="complete_badge">Complète</string>
+    <string name="new_release">🆕 %1$s</string>
+    <string name="missing_volumes">Manquants : %1$s</string>
+    <string name="no_volume">Aucun tome</string>
+    <string name="field_title">Titre</string>
+    <string name="field_total">Nombre de tomes parus</string>
+    <string name="field_total_hint">Optionnel : laisse vide si tu ne sais pas</string>
+    <string name="add_volumes_title">Ajouter des tomes</string>
+    <string name="field_owned">Tomes possédés</string>
+    <!-- « 1-12 » : c'est ce que l'utilisateur tape, le trait d'union reste. -->
+    <string name="volumes_hint" tools:ignore="TypographyDashes">Un numéro, une plage (1-12) ou une liste</string>
+    <string name="volumes_invalid">Format non reconnu</string>
+    <string name="import_title">Importer la sauvegarde ?</string>
+    <string name="import_replace">Ta collection actuelle (%1$s) sera remplacée par celle de la sauvegarde (%2$s).</string>
+    <string name="save_error_title">Enregistrement impossible</string>
+    <string name="save_error_text">Tes dernières modifications n\'ont pas pu être enregistrées sur le téléphone (stockage plein ?). Libère de la place, puis exporte ta collection pour ne rien perdre.</string>
+    <string name="delete_title">Supprimer la série ?</string>
+    <string name="delete_text">« %1$s » et tous ses tomes seront retirés de ta collection.</string>
+    <string name="watch_stop">Arrêter la surveillance des sorties</string>
+    <string name="watch_start">Surveiller les sorties</string>
+    <string name="tap_hint">Touche un tome pour le cocher ou le décocher.</string>
+    <string name="volume_n">Tome %1$d</string>
+    <string name="have_next_volume">J\'ai le tome %1$d</string>
+    <string name="edit_series">Modifier la série</string>
+    <string name="series_complete">Série complète 🎉</string>
+    <string name="next_to_buy">Prochain à acheter : tome %1$d</string>
+    <string name="checking">Recherche en cours…</string>
+    <string name="not_checked">Pas encore vérifié.</string>
+    <string name="no_release_found">Aucun tome trouvé pour ce titre. Vérifie qu\'il est écrit comme sur la couverture.</string>
+    <string name="open_book">Voir la fiche du livre</string>
+    <string name="checked_at">Vérifié le %1$s · source : %2$s</string>
+    <string name="release_volume">Tome %1$d</string>
+    <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
+    <string name="release_published">Tome %1$d · paru le %2$s</string>
+    <string name="channel_releases">Sorties de tomes</string>
+    <string name="notif_new_volume">Nouveau tome : %1$s</string>
+    <string name="update_title">Mise à jour</string>
+    <string name="update_available">Mise à jour disponible</string>
+    <string name="update_failed_title">Mise à jour impossible</string>
+    <string name="update_checking">Recherche d\'une nouvelle version…</string>
+    <string name="update_up_to_date">Tu as déjà la dernière version (%1$s).</string>
+    <string name="update_permission">Pour installer la version %1$s, autorise Manga Reminder à installer des applications (réglage Android « Installer des applis inconnues »), puis reviens et appuie sur « Mettre à jour ». Ta collection est conservée.</string>
+    <string name="update_downloading">Téléchargement de la version %1$s…</string>
+    <string name="update_installing">Installation… Android va demander de confirmer la mise à jour.</string>
+    <string name="update_versions">Version %1$s (installée : %2$s). Ta collection est conservée.</string>
+    <string name="update_err_not_stable">La dernière release n\'est pas une version stable.</string>
+    <string name="update_err_github_unreadable">Réponse de GitHub illisible.</string>
+    <string name="update_err_version_json_unreadable">version.json illisible.</string>
+    <string name="update_err_version_json_incomplete">version.json incomplet.</string>
+    <string name="update_err_tag_mismatch">La release %1$s ne correspond pas à la version %2$s.</string>
+    <string name="update_err_no_sha">Empreinte SHA-256 absente de version.json.</string>
+    <string name="update_err_apk_missing">APK introuvable dans la release %1$s.</string>
+    <string name="update_err_apk_size">Taille de l\'APK invalide.</string>
+    <string name="update_err_digest_mismatch">L\'empreinte de l\'APK ne correspond pas à version.json.</string>
+    <string name="update_err_no_release">Aucune version publiée sur GitHub.</string>
+    <string name="update_err_no_version_json">La release %1$s n\'a pas de version.json.</string>
+    <string name="update_err_incomplete">Téléchargement incomplet.</string>
+    <string name="update_err_corrupt">Fichier corrompu : son empreinte SHA-256 ne correspond pas à la release.</string>
+    <string name="update_err_not_apk">Le fichier téléchargé n\'est pas un APK valide.</string>
+    <string name="update_err_wrong_package">Cet APK n\'est pas Manga Reminder.</string>
+    <string name="update_err_version_mismatch">La version de l\'APK ne correspond pas à la release.</string>
+    <string name="update_err_signature_unreadable">Impossible de lire la signature de l\'APK.</string>
+    <string name="update_err_wrong_signature">APK refusé : il n\'est pas signé avec la clé de l\'application.</string>
+    <string name="update_err_unexpected_size">Taille de l\'APK inattendue.</string>
+    <string name="update_err_url_refused">Adresse de téléchargement refusée.</string>
+    <string name="update_err_no_confirmation">Android n\'a pas demandé de confirmation.</string>
+    <string name="update_err_confirmation_failed">Impossible d\'afficher la confirmation d\'Android.</string>
+    <string name="update_err_cancelled">Mise à jour annulée.</string>
+    <string name="update_err_storage">Pas assez de place sur le téléphone.</string>
+    <string name="update_err_incompatible">Android a refusé la mise à jour (signature ou version incompatible).</string>
+    <string name="update_err_install_failed">Échec de l\'installation.</string>
+    <string name="update_err_install_failed_detail">Échec de l\'installation : %1$s</string>
+    <string name="update_err_network">Connexion à GitHub impossible. Vérifie le réseau et réessaie.</string>
+    <string name="update_err_unexpected">Mise à jour impossible : %1$s.</string>
+    <plurals name="series_count">
+        <item quantity="one">%d série</item>
+        <item quantity="many">%d séries</item>
+        <item quantity="other">%d séries</item>
+    </plurals>
+    <plurals name="series_imported">
+        <item quantity="one">%d série importée</item>
+        <item quantity="many">%d séries importées</item>
+        <item quantity="other">%d séries importées</item>
+    </plurals>
+    <plurals name="import_add">
+        <item quantity="one">%d série va être ajoutée.</item>
+        <item quantity="many">%d séries vont être ajoutées.</item>
+        <item quantity="other">%d séries vont être ajoutées.</item>
+    </plurals>
+    <plurals name="owned_of_total">
+        <item quantity="one">%1$d / %2$d tome</item>
+        <item quantity="many">%1$d / %2$d tomes</item>
+        <item quantity="other">%1$d / %2$d tomes</item>
+    </plurals>
+    <plurals name="owned_last">
+        <item quantity="one">%1$d tome · dernier : %2$d</item>
+        <item quantity="many">%1$d tomes · dernier : %2$d</item>
+        <item quantity="other">%1$d tomes · dernier : %2$d</item>
+    </plurals>
+    <plurals name="volumes_preview">
+        <item quantity="one">%1$d tome : %2$s</item>
+        <item quantity="many">%1$d tomes : %2$s</item>
+        <item quantity="other">%1$d tomes : %2$s</item>
+    </plurals>
+    <plurals name="check_failures">
+        <item quantity="one">%d série non vérifiée : Google Books n\'a pas répondu (quota ?).</item>
+        <item quantity="many">%d séries non vérifiées : Google Books n\'a pas répondu (quota ?).</item>
+        <item quantity="other">%d séries non vérifiées : Google Books n\'a pas répondu (quota ?).</item>
+    </plurals>
 </resources>
