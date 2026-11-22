@@ -75,6 +75,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.TextButton
 import com.mangareminder.releases.autoCover
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Person
 
 @Composable
 fun SeriesDetailScreen(
@@ -93,7 +97,12 @@ fun SeriesDetailScreen(
     onSearchCovers: () -> Unit,
     onChooseCover: (String?) -> Unit,
     onDismissCoverSearch: () -> Unit,
+    onSetRead: (volume: Int, read: Boolean) -> Unit,
+    onLend: (volume: Int, to: String) -> Unit,
+    onReturnLoan: (volume: Int) -> Unit,
 ) {
+    // Tome dont on modifie le statut (appui long sur une case possédée).
+    var statusVolume by rememberSaveable { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
     // Android 13+ : la permission de notifier est demandée quand on active la surveillance.
     // Un refus n'empêche pas la surveillance : les sorties restent visibles dans l'app.
@@ -176,11 +185,18 @@ fun SeriesDetailScreen(
             }
             items((1..gridSize).toList(), key = { it }) { volume ->
                 val owned = volume in series.ownedVolumes
-                val description = stringResource(R.string.volume_n, volume)
+                val description = listOfNotNull(
+                    stringResource(R.string.volume_n, volume),
+                    stringResource(R.string.volume_read).takeIf { volume in series.readVolumes },
+                    series.loans[volume]?.let { stringResource(R.string.volume_lent_to, it.to) },
+                ).joinToString(", ")
                 VolumeTile(
                     label = "$volume",
                     owned = owned,
+                    read = volume in series.readVolumes,
+                    lent = volume in series.loans,
                     onClick = { onToggleVolume(volume) },
+                    onLongClick = if (owned) ({ statusVolume = volume }) else null,
                     modifier = Modifier.semantics {
                         contentDescription = description
                         role = Role.Checkbox
@@ -217,6 +233,18 @@ fun SeriesDetailScreen(
             },
         )
     }
+    statusVolume?.takeIf { it in series.ownedVolumes }?.let { volume ->
+        VolumeStatusDialog(
+            volume = volume,
+            read = volume in series.readVolumes,
+            loan = series.loans[volume],
+            onSetRead = { onSetRead(volume, it) },
+            onLend = { onLend(volume, it) },
+            onReturn = { onReturnLoan(volume) },
+            onDismiss = { statusVolume = null },
+        )
+    }
+
     coverSearch?.let {
         CoverChooserDialog(
             search = it,
@@ -271,6 +299,15 @@ private fun SummaryCard(series: Series, cover: String?, onChooseCover: () -> Uni
                     series.totalVolumes == null && series.ownedCount > 0 ->
                         Text(stringResource(R.string.next_to_buy, series.lastOwned + 1))
                 }
+                if (series.readVolumes.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.read_volumes, formatVolumes(series.readVolumes)),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (series.loans.isNotEmpty()) {
+                    Text(loansSummary(series), style = MaterialTheme.typography.bodyMedium)
+                }
                 TextButton(onClick = onChooseCover, contentPadding = PaddingValues(0.dp)) {
                     Text(stringResource(R.string.cover_choose))
                 }
@@ -280,15 +317,30 @@ private fun SummaryCard(series: Series, cover: String?, onChooseCover: () -> Uni
 }
 
 @Composable
-private fun VolumeTile(label: String, owned: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun VolumeTile(
+    label: String,
+    owned: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    read: Boolean = false,
+    lent: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+) {
     val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(10.dp)
     Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
+        shape = shape,
         color = if (owned) colors.primary else colors.surface,
         contentColor = if (owned) colors.onPrimary else colors.onSurfaceVariant,
         border = if (owned) null else BorderStroke(1.dp, colors.outline),
-        modifier = modifier.aspectRatio(0.75f),
+        modifier = modifier
+            .aspectRatio(0.75f)
+            .clip(shape)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onLongClickLabel = onLongClick?.let { stringResource(R.string.volume_status_action) },
+            ),
     ) {
         Box(contentAlignment = Alignment.Center) {
             // Le texte visible est remplacé par la description de la case pour TalkBack.
@@ -298,6 +350,21 @@ private fun VolumeTile(label: String, owned: Boolean, onClick: () -> Unit, modif
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clearAndSetSemantics {},
             )
+            // Petits repères : lu (coche) et prêté (personne), décrits dans la description de la case.
+            if (read) {
+                Icon(
+                    Icons.Default.Done,
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(4.dp).size(14.dp),
+                )
+            }
+            if (lent) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(14.dp),
+                )
+            }
         }
     }
 }

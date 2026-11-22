@@ -54,6 +54,18 @@ class SeriesRepository(dir: File) {
                     put("owned", JSONArray(s.ownedVolumes.sorted()))
                     if (s.watched) put("watched", true)
                     s.cover?.let { put("cover", it) }
+                    if (s.readVolumes.isNotEmpty()) put("read", JSONArray(s.readVolumes.sorted()))
+                    if (s.loans.isNotEmpty()) {
+                        put("loans", JSONArray().apply {
+                            s.loans.toSortedMap().forEach { (volume, loan) ->
+                                put(JSONObject().apply {
+                                    put("volume", volume)
+                                    put("to", loan.to)
+                                    loan.date?.let { put("date", it) }
+                                })
+                            }
+                        })
+                    }
                 })
             }
             return array.toString()
@@ -84,10 +96,36 @@ class SeriesRepository(dir: File) {
                     watched = o.optBoolean("watched", false),
                     // Champ facultatif : une adresse invalide est ignorée plutôt que de refuser la sauvegarde.
                     cover = o.optString("cover").takeIf { isSafeCoverUrl(it) },
+                    readVolumes = readVolumes(o, volumes),
+                    loans = loans(o, volumes),
                 )
             }
             if (series.distinctBy { it.id }.size != series.size) throw JSONException("Identifiants en double")
             return series
+        }
+
+        /** Champ facultatif « read » ; seuls les tomes possédés sont gardés. */
+        private fun readVolumes(o: JSONObject, owned: Set<Int>): Set<Int> {
+            val array = o.optJSONArray("read") ?: return emptySet()
+            val read = (0 until array.length()).map { array.getInt(it) }.toSet()
+            if (read.any { it !in 1..MAX_VOLUME }) throw JSONException("Tome lu invalide")
+            return read intersect owned
+        }
+
+        /** Champ facultatif « loans » ; seuls les tomes possédés sont gardés. */
+        private fun loans(o: JSONObject, owned: Set<Int>): Map<Int, Loan> {
+            val array = o.optJSONArray("loans") ?: return emptyMap()
+            if (array.length() > MAX_VOLUME) throw JSONException("Trop de prêts")
+            val result = mutableMapOf<Int, Loan>()
+            for (i in 0 until array.length()) {
+                val l = array.getJSONObject(i)
+                val volume = l.getInt("volume")
+                if (volume !in 1..MAX_VOLUME) throw JSONException("Tome prêté invalide")
+                val to = l.getString("to").trim()
+                if (to.isEmpty() || to.length > MAX_BORROWER_LENGTH) throw JSONException("Nom de prêt invalide")
+                if (volume in owned) result[volume] = Loan(to, loanDate(l.optString("date")))
+            }
+            return result
         }
 
         const val MAX_SERIES = 5_000

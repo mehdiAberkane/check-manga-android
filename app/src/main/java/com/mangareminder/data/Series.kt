@@ -14,8 +14,32 @@ data class Series(
     val watched: Boolean = false,
     /** Couverture choisie (miniature Google Books) ; null : couverture automatique, s'il y en a une. */
     val cover: String? = null,
+    /** Tomes lus, parmi les tomes possédés. */
+    val readVolumes: Set<Int> = emptySet(),
+    /** Tomes prêtés, parmi les tomes possédés : à qui et depuis quand. */
+    val loans: Map<Int, Loan> = emptyMap(),
 ) {
     val ownedCount: Int get() = ownedVolumes.size
+
+    /** Retire un tome de la collection, avec son statut de lecture et son prêt. */
+    fun withoutVolume(volume: Int): Series =
+        copy(ownedVolumes = ownedVolumes - volume, readVolumes = readVolumes - volume, loans = loans - volume)
+
+    /** Lu / pas lu ; sans effet sur un tome non possédé. */
+    fun withRead(volume: Int, read: Boolean): Series = when {
+        volume !in ownedVolumes -> this
+        read -> copy(readVolumes = readVolumes + volume)
+        else -> copy(readVolumes = readVolumes - volume)
+    }
+
+    /** Prête un tome possédé ; un nom vide ou trop long est refusé (pas de changement). */
+    fun withLoan(volume: Int, to: String, date: String?): Series {
+        val name = to.trim()
+        if (volume !in ownedVolumes || name.isEmpty() || name.length > MAX_BORROWER_LENGTH) return this
+        return copy(loans = loans + (volume to Loan(name, date)))
+    }
+
+    fun withoutLoan(volume: Int): Series = copy(loans = loans - volume)
 
     val lastOwned: Int get() = ownedVolumes.maxOrNull() ?: 0
 
@@ -76,6 +100,16 @@ fun parseVolumes(input: String): Set<Int>? {
 }
 
 const val MAX_VOLUME = 999
+
+const val MAX_BORROWER_LENGTH = 50
+
+/** Prêt d'un tome : à qui (nom libre) et depuis quand (« 2026-11-22 », facultatif). */
+data class Loan(val to: String, val date: String? = null)
+
+private val LOAN_DATE = Regex("\\d{4}-\\d{2}-\\d{2}")
+
+/** Date de prêt au format attendu, sinon null. */
+fun loanDate(raw: String?): String? = raw?.takeIf { it.matches(LOAN_DATE) }
 
 /**
  * Clé de recherche et de tri d'un titre : minuscules, sans accents, ponctuation (dont l'apostrophe

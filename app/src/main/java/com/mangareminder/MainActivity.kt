@@ -92,6 +92,9 @@ private fun MangaReminderApp(
             onSearchCovers = { viewModel.searchCovers(selected) },
             onChooseCover = { viewModel.chooseCover(selected.id, it) },
             onDismissCoverSearch = viewModel::dismissCoverSearch,
+            onSetRead = { volume, read -> viewModel.setRead(selected.id, volume, read) },
+            onLend = { volume, to -> viewModel.lend(selected.id, volume, to) },
+            onReturnLoan = { volume -> viewModel.returnLoan(selected.id, volume) },
         )
     }
 
