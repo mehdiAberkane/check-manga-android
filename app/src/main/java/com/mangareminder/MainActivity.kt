@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import com.mangareminder.ui.ShoppingListScreen
 import com.mangareminder.ui.ScanDialog
 import com.mangareminder.ui.startBarcodeScan
+import com.mangareminder.ui.UnreadableCollectionScreen
 
 class MainActivity : ComponentActivity() {
     /** Demande d'ouverture de la liste « À acheter » (widget), consommée par l'écran. */
@@ -75,6 +76,7 @@ private fun MangaReminderApp(
     val listSort by viewModel.listSort.collectAsStateWithLifecycle()
     val undo by viewModel.undo.collectAsStateWithLifecycle()
     val scan by viewModel.scan.collectAsStateWithLifecycle()
+    val unreadable by viewModel.collectionUnreadable.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val startScan = { startBarcodeScan(context, onCode = viewModel::lookupIsbn, onUnavailable = viewModel::scanManually) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -87,6 +89,21 @@ private fun MangaReminderApp(
             showShopping = true
             onShoppingOpened()
         }
+    }
+
+    // series.json illisible : rien d'autre n'est affiché tant que l'utilisateur n'a pas choisi.
+    if (unreadable) {
+        UnreadableCollectionScreen(
+            hasAutoBackup = backupStatus.folder != null,
+            pendingImport = pendingImport,
+            onRestoreLatest = viewModel::loadLatestBackup,
+            onReadBackup = viewModel::readBackup,
+            onConfirmImport = viewModel::confirmImport,
+            onCancelImport = viewModel::cancelImport,
+            onExportDamaged = viewModel::exportDamaged,
+            onStartEmpty = viewModel::startEmpty,
+        )
+        return
     }
 
     if (selected == null && showShopping) {

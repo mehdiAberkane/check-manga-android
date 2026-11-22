@@ -42,6 +42,7 @@ import com.mangareminder.data.normalizeIsbn
 import com.mangareminder.data.parseIsbnLookup
 import com.mangareminder.releases.Http
 import java.net.URL
+import com.mangareminder.data.LoadResult
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = SeriesRepository(app)
@@ -49,7 +50,15 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     // Un seul thread d'écriture : les sauvegardes s'appliquent dans l'ordre des modifications.
     private val saver = Executors.newSingleThreadExecutor()
 
-    private val _series = MutableStateFlow(sorted(repository.load()))
+    private val initialLoad = repository.load()
+    private val _series = MutableStateFlow(sorted((initialLoad as? LoadResult.Ok)?.series.orEmpty()))
+
+    private val _unreadable = MutableStateFlow(initialLoad is LoadResult.Unreadable)
+    /**
+     * series.json existe mais n'a pas pu être lu. Tant que l'utilisateur n'a pas choisi (restaurer,
+     * importer, repartir de zéro), aucune modification n'est enregistrée : le fichier reste intact.
+     */
+    val collectionUnreadable: StateFlow<Boolean> = _unreadable.asStateFlow()
     val series: StateFlow<List<Series>> = _series.asStateFlow()
 
     private val _saveFailed = MutableStateFlow(false)
@@ -293,9 +302,35 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     fun confirmImport() {
         val series = _pendingImport.value ?: return
         _pendingImport.value = null
+        val recovering = _unreadable.value
+        _unreadable.value = false
         val previous = _series.value
         replaceAll(series)
-        _undo.value = UndoAction.Imported(previous, series.size)
+        if (!recovering) _undo.value = UndoAction.Imported(previous, series.size)
+    }
+
+    /** Collection illisible : propose la dernière sauvegarde automatique (via la confirmation d'import). */
+    suspend fun loadLatestBackup(): Boolean {
+        val (_, text) = AutoBackup.readLatest(getApplication<Application>()) ?: return false
+        val series = runCatching { SeriesRepository.fromJson(text) }.getOrNull() ?: return false
+        _pendingImport.value = series
+        return true
+    }
+
+    /** Collection illisible : copie du fichier abîmé dans un fichier choisi par l'utilisateur. */
+    suspend fun exportDamaged(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        val bytes = repository.readDamaged() ?: return@withContext false
+        runCatching {
+            getApplication<Application>().contentResolver.openOutputStream(uri)!!.use { it.write(bytes) }
+        }.isSuccess
+    }
+
+    /**
+     * Collection illisible : l'utilisateur choisit de repartir de zéro. Une copie datée du fichier
+     * abîmé a été mise de côté au chargement ; series.json sera remplacé à la prochaine modification.
+     */
+    fun startEmpty() {
+        _unreadable.value = false
     }
 
     fun cancelImport() {
@@ -333,6 +368,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun update(transform: (List<Series>) -> List<Series>) {
+        if (_unreadable.value) return
         val newList = sorted(transform(_series.value))
         _series.value = newList
         saver.execute {

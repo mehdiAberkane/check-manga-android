@@ -109,8 +109,8 @@ class SeriesRepositoryTest {
     }
 
     @Test
-    fun `fichier absent donne une collection vide`() {
-        assertEquals(emptyList<Series>(), SeriesRepository(tmp.root).load())
+    fun `fichier absent, pas une collection illisible`() {
+        assertEquals(LoadResult.Missing, SeriesRepository(tmp.root).load())
     }
 
     @Test
@@ -118,24 +118,52 @@ class SeriesRepositoryTest {
         val repo = SeriesRepository(tmp.root)
         val series = listOf(Series(1, "Naruto", ownedVolumes = setOf(1, 2)))
         repo.save(series)
-        assertEquals(series, repo.load())
+        assertEquals(LoadResult.Ok(series), repo.load())
         assertFalse(File(tmp.root, "series.json.tmp").exists())
     }
 
+    private fun corruptCopies() = tmp.root.list()!!.filter { it.startsWith(SeriesRepository.CORRUPT_PREFIX) }
+
     @Test
-    fun `fichier illisible mis de côté, jamais écrasé`() {
+    fun `json invalide, copie datée mise de côté et fichier intact`() {
         val file = File(tmp.root, "series.json")
-        val corrupt = File(tmp.root, "series.json.corrupt")
         file.writeText("[{\"id\": 1, \"title\": \"\", \"owned\": []}]")
         val original = file.readText()
 
         val repo = SeriesRepository(tmp.root)
-        assertEquals(emptyList<Series>(), repo.load())
-        assertTrue(corrupt.exists())
-        assertEquals(original, corrupt.readText())
+        assertEquals(LoadResult.Unreadable, repo.load())
+        // Rien n'est écrit dans series.json tant que l'utilisateur n'a pas choisi.
+        assertEquals(original, file.readText())
+        val copy = corruptCopies().single()
+        assertTrue(copy.matches(Regex("series\\.json\\.corrupt-\\d{8}-\\d{4}")))
+        assertEquals(original, File(tmp.root, copy).readText())
+        assertEquals(original, String(repo.readDamaged()!!))
 
-        // La sauvegarde suivante remplace series.json, mais la copie mise de côté reste intacte.
+        // Une sauvegarde ultérieure (choix « repartir de zéro ») ne touche pas à la copie.
         repo.save(listOf(Series(2, "One Piece")))
-        assertEquals(original, corrupt.readText())
+        assertEquals(original, File(tmp.root, copy).readText())
+    }
+
+    @Test
+    fun `lecture impossible, illisible sans planter`() {
+        // Un dossier à la place du fichier : la lecture lève une IOException.
+        File(tmp.root, "series.json").mkdir()
+        assertEquals(LoadResult.Unreadable, SeriesRepository(tmp.root).load())
+    }
+
+    @Test
+    fun `tâche de fond, lecture seule sans copie de côté`() {
+        File(tmp.root, "series.json").writeText("pas du json")
+        assertEquals(LoadResult.Unreadable, SeriesRepository(tmp.root).load(setAside = false))
+        assertEquals(emptyList<String>(), corruptCopies())
+    }
+
+    @Test
+    fun `seules les copies les plus récentes sont gardées`() {
+        val names = (1..8).map { "series.json.corrupt-2026110$it-1200" } + listOf("series.json.corrupt", "series.json", "autre")
+        assertEquals(
+            listOf("series.json.corrupt-20261103-1200", "series.json.corrupt-20261102-1200", "series.json.corrupt-20261101-1200"),
+            SeriesRepository.corruptCopiesToDelete(names),
+        )
     }
 }

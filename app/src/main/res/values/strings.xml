@@ -133,6 +133,14 @@
     <string name="scan_search">Chercher</string>
     <string name="scan_not_found">Livre introuvable sur Google Books.</string>
     <string name="scan_lookup_failed">Google Books ne répond pas (quota ?). Réessaie plus tard.</string>
+    <string name="unreadable_title">Collection illisible</string>
+    <string name="unreadable_text">Le fichier de ta collection n\'a pas pu être lu (fichier abîmé ou erreur de lecture). Il n\'a pas été modifié et une copie a été mise de côté. Choisis comment continuer :</string>
+    <string name="unreadable_restore">Restaurer la dernière sauvegarde automatique</string>
+    <string name="unreadable_no_backup">Aucune sauvegarde automatique lisible dans le dossier choisi.</string>
+    <string name="unreadable_export">Exporter le fichier abîmé</string>
+    <string name="unreadable_start_empty">Repartir d\'une collection vide</string>
+    <string name="unreadable_start_empty_text">Ta collection sera vide. Le fichier abîmé reste mis de côté sur le téléphone, mais il sera remplacé à la prochaine modification. Exporte-le d\'abord si tu veux le garder.</string>
+    <string name="unreadable_start_empty_confirm">Repartir de zéro</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>

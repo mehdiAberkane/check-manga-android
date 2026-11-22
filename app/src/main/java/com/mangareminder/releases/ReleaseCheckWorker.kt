@@ -23,6 +23,7 @@ import androidx.work.WorkerParameters
 import com.mangareminder.MainActivity
 import com.mangareminder.R
 import com.mangareminder.data.Series
+import com.mangareminder.data.LoadResult
 import com.mangareminder.data.SeriesRepository
 import com.mangareminder.widget.MangaWidgetUpdater
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,9 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         ReleaseStore.init(applicationContext)
-        val all = SeriesRepository(applicationContext).load()
+        // Collection illisible : on ne touche à rien (ni cache des sorties, ni copie de côté).
+        val all = (SeriesRepository(applicationContext).load(setAside = false) as? LoadResult.Ok)?.series
+            ?: return@withContext Result.success()
         ReleaseStore.retainOnly(all.map { it.id }.toSet())
         val watched = all.filter { it.watched }
         if (watched.isEmpty()) return@withContext Result.success()

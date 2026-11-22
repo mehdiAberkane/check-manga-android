@@ -136,6 +136,23 @@ object AutoBackup {
         }
     }
 
+    /**
+     * Contenu de la sauvegarde automatique la plus récente : (nom du fichier, texte), ou null
+     * (pas de dossier, dossier vide ou inaccessible). Lecture seule.
+     */
+    suspend fun readLatest(context: Context): Pair<String, String>? = withContext(Dispatchers.IO) {
+        val folder = _status.value.folder ?: return@withContext null
+        runCatching {
+            val children = listChildren(context, folder)
+            val name = latestBackupName(children.keys) ?: return@runCatching null
+            val text = context.contentResolver.openInputStream(children.getValue(name))?.use { input ->
+                val bytes = input.readBytes()
+                if (bytes.size > SeriesRepository.MAX_BACKUP_BYTES) null else bytes.toString(Charsets.UTF_8)
+            } ?: return@runCatching null
+            name to text
+        }.getOrNull()
+    }
+
     /** Fichiers du dossier : nom -> adresse du document. */
     private fun listChildren(context: Context, folder: Uri): Map<String, Uri> {
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(folder, DocumentsContract.getTreeDocumentId(folder))

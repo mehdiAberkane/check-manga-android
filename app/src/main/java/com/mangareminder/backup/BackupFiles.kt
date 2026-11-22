@@ -27,3 +27,11 @@ fun backupsToDelete(names: Collection<String>, keep: Int = KEPT_BACKUPS): List<S
         .sortedByDescending { it.second }
         .drop(keep)
         .map { it.first }
+
+/** Sauvegarde automatique la plus récente du dossier, ou null s'il n'y en a pas. */
+fun latestBackupName(names: Collection<String>): String? =
+    names.mapNotNull { name ->
+        BACKUP_NAME.matchEntire(name)?.let { match ->
+            runCatching { LocalDate.parse(match.groupValues[1]) }.getOrNull()?.let { name to it }
+        }
+    }.maxByOrNull { it.second }?.first
