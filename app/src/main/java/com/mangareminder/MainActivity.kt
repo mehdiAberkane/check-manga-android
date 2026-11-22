@@ -69,6 +69,7 @@ private fun MangaReminderApp(
             onEnableBackup = viewModel::enableBackup,
             onDisableBackup = viewModel::disableBackup,
             onBackupNow = viewModel::backupNow,
+            onMarkOwned = { id, volume -> viewModel.addVolumes(id, setOf(volume)) },
         )
     } else {
         BackHandler { selectedId = null }

@@ -7,6 +7,8 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 - Liste des séries avec recherche, nombre de tomes possédés et tomes manquants.
 - Fiche d'une série : grille des tomes, un appui coche ou décoche un tome.
 - Ajout rapide de plusieurs tomes : `1-12, 15, 17`.
+- En magasin : chercher « one piece 45 » (ou `t45`, `tome 45`, `#45`) répond directement en haut de la liste
+  « tu l'as » ou « tu ne l'as pas », avec un bouton « Je l'ai acheté » qui coche le tome.
 - Nombre total de tomes optionnel (série en cours) : la case « + » marque le tome suivant.
 - Données stockées sur le téléphone (`series.json`), incluses dans la sauvegarde Android (Google et
   transfert vers un nouveau téléphone). Seule la collection est sauvegardée : pas les fichiers

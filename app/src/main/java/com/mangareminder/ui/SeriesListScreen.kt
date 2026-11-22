@@ -50,7 +50,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mangareminder.data.Series
 import com.mangareminder.data.formatVolumes
-import com.mangareminder.data.matchesSearch
 import com.mangareminder.releases.Release
 import com.mangareminder.releases.SeriesReleases
 import kotlinx.coroutines.launch
@@ -64,6 +63,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import com.mangareminder.releases.autoCover
 import com.mangareminder.backup.BackupStatus
+import com.mangareminder.data.searchResults
+import com.mangareminder.data.volumeAnswers
+import com.mangareminder.data.VolumeAnswer
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 
 @Composable
 fun SeriesListScreen(
@@ -82,6 +86,7 @@ fun SeriesListScreen(
     onEnableBackup: (Uri) -> Boolean,
     onDisableBackup: () -> Unit,
     onBackupNow: () -> Unit,
+    onMarkOwned: (seriesId: Long, volume: Int) -> Unit,
 ) {
     var showBackup by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -91,9 +96,9 @@ fun SeriesListScreen(
     // Textes des snackbars, lus hors composition (dans les callbacks).
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
-    val filtered = remember(series, query) {
-        series.filter { matchesSearch(it.title, query) }
-    }
+    val filtered = remember(series, query) { searchResults(series, query) }
+    // « one piece 45 » : réponse directe en haut de la liste (usage en magasin).
+    val answers = remember(series, query) { volumeAnswers(series, query) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -206,6 +211,9 @@ fun SeriesListScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    items(answers, key = { "answer-${it.series.id}" }) { answer ->
+                        VolumeAnswerCard(answer, onMarkOwned = { onMarkOwned(answer.series.id, answer.volume) })
+                    }
                     items(filtered, key = { it.id }) { s ->
                         val newRelease = if (s.watched) releases[s.id]?.newRelease(s.lastKnownVolume) else null
                         SeriesCard(s, newRelease, cover = s.cover ?: releases[s.id].autoCover(), onClick = { onOpen(s.id) })
@@ -254,6 +262,47 @@ fun SeriesListScreen(
                 scope.launch { snackbar.showSnackbar(resources.getQuantityString(R.plurals.series_imported, count, count)) }
             },
         )
+    }
+}
+
+/** « One Piece, tome 45 : tu l'as » ou « tu ne l'as pas » avec un bouton pour le cocher. */
+@Composable
+private fun VolumeAnswerCard(answer: VolumeAnswer, onMarkOwned: () -> Unit) {
+    val owned = answer.owned
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (owned) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(
+                        if (owned) R.string.answer_owned else R.string.answer_missing,
+                        answer.series.title,
+                        answer.volume,
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (owned) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onErrorContainer,
+                )
+                val total = answer.series.totalVolumes
+                if (!owned && answer.beyondTotal && total != null) {
+                    Text(
+                        pluralStringResource(R.plurals.answer_beyond_total, total, total),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+            if (!owned) {
+                Button(onClick = onMarkOwned, modifier = Modifier.padding(start = 8.dp)) {
+                    Text(stringResource(R.string.action_bought))
+                }
+            }
+        }
     }
 }
 
