@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#C62828</color>
+    <!-- Widget, thème clair (thème sombre dans values-night). -->
+    <color name="widget_background">#FFFBFAF9</color>
+    <color name="widget_text">#FF1C1B1F</color>
+    <color name="widget_text_secondary">#FF49454F</color>
+    <color name="widget_accent">#FFC62828</color>
 </resources>

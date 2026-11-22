@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.mangareminder.backup.AutoBackup
 import com.mangareminder.backup.BackupStatus
 import com.mangareminder.data.MAX_VOLUME
+import com.mangareminder.widget.MangaWidgetUpdater
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
 import com.mangareminder.data.seriesOrder
@@ -222,6 +223,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 repository.save(newList)
                 AutoBackup.scheduleAfterChange(getApplication<Application>())
+                MangaWidgetUpdater.update(getApplication<Application>())
             } catch (e: IOException) {
                 _saveFailed.value = true
             }
