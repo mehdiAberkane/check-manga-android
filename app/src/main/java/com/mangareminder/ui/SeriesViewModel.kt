@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.time.LocalDate
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.Executors
@@ -138,10 +139,17 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         // Hors bornes, la collection serait rejetée au prochain chargement.
         if (volume !in 1..MAX_VOLUME) return
         updateSeries(id) {
-            val owned = if (volume in it.ownedVolumes) it.ownedVolumes - volume else it.ownedVolumes + volume
-            it.copy(ownedVolumes = owned)
+            // Un tome retiré perd aussi son statut de lecture et son prêt.
+            if (volume in it.ownedVolumes) it.withoutVolume(volume) else it.copy(ownedVolumes = it.ownedVolumes + volume)
         }
     }
+
+    fun setRead(id: Long, volume: Int, read: Boolean) = updateSeries(id) { it.withRead(volume, read) }
+
+    fun lend(id: Long, volume: Int, to: String) =
+        updateSeries(id) { it.withLoan(volume, to, LocalDate.now().toString()) }
+
+    fun returnLoan(id: Long, volume: Int) = updateSeries(id) { it.withoutLoan(volume) }
 
     fun addVolumes(id: Long, volumes: Set<Int>) = updateSeries(id) {
         it.copy(ownedVolumes = it.ownedVolumes + volumes)

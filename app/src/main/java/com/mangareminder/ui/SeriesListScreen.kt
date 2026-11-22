@@ -68,6 +68,7 @@ import com.mangareminder.data.volumeAnswers
 import com.mangareminder.data.VolumeAnswer
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 
 @Composable
 fun SeriesListScreen(
@@ -88,6 +89,7 @@ fun SeriesListScreen(
     onBackupNow: () -> Unit,
     onMarkOwned: (seriesId: Long, volume: Int) -> Unit,
 ) {
+    var onlyLent by rememberSaveable { mutableStateOf(false) }
     var showBackup by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -96,7 +98,9 @@ fun SeriesListScreen(
     // Textes des snackbars, lus hors composition (dans les callbacks).
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
-    val filtered = remember(series, query) { searchResults(series, query) }
+    val filtered = remember(series, query, onlyLent) {
+        searchResults(series, query).filter { !onlyLent || it.loans.isNotEmpty() }
+    }
     // « one piece 45 » : réponse directe en haut de la liste (usage en magasin).
     val answers = remember(series, query) { volumeAnswers(series, query) }
 
@@ -202,6 +206,14 @@ fun SeriesListScreen(
                         }
                     },
                     singleLine = true,
+                )
+            }
+            if (series.any { it.loans.isNotEmpty() }) {
+                FilterChip(
+                    selected = onlyLent,
+                    onClick = { onlyLent = !onlyLent },
+                    label = { Text(stringResource(R.string.filter_lent)) },
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
             when {
@@ -357,6 +369,16 @@ private fun SeriesCard(series: Series, newRelease: Release?, cover: String?, onC
                         stringResource(R.string.new_release, it.describe().text()),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                if (series.loans.isNotEmpty()) {
+                    Text(
+                        loansSummary(series),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
