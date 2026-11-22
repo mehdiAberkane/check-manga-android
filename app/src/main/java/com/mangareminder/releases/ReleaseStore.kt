@@ -1,8 +1,6 @@
 package com.mangareminder.releases
 
 import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +30,12 @@ object ReleaseStore {
         val f = File(context.applicationContext.filesDir, "releases.json")
         file = f
         _data.value = try {
-            if (f.exists()) fromJson(f.readText()) else emptyMap()
+            when {
+                !f.exists() -> emptyMap()
+                // Fichier anormalement gros : ignoré plutôt que chargé en mémoire.
+                f.length() > MAX_RELEASE_CACHE_BYTES -> emptyMap()
+                else -> releaseCacheFromJson(f.readText())
+            }
         } catch (e: Exception) {
             // JSON illisible, id invalide, lecture impossible… Simple cache : il sera reconstruit
             // à la prochaine vérification.
@@ -44,7 +47,7 @@ object ReleaseStore {
 
     @Synchronized
     fun put(seriesId: Long, releases: SeriesReleases) {
-        _data.value = _data.value + (seriesId to releases)
+        _data.value = _data.value + (seriesId to releases.sanitized())
         save()
     }
 
@@ -68,51 +71,10 @@ object ReleaseStore {
         val f = file ?: return
         try {
             val tmp = File(f.parentFile, "releases.json.tmp")
-            tmp.writeText(toJson(_data.value))
+            tmp.writeText(releaseCacheToJson(_data.value))
             tmp.renameTo(f)
         } catch (e: IOException) {
             // Cache non critique : on réessaiera à la prochaine vérification.
-        }
-    }
-
-    private fun toJson(data: Map<Long, SeriesReleases>): String {
-        val root = JSONObject()
-        data.forEach { (id, sr) ->
-            root.put(id.toString(), JSONObject().apply {
-                put("checkedAt", sr.checkedAt)
-                put("notifiedMax", sr.notifiedMax)
-                put("releases", JSONArray().apply {
-                    sr.releases.forEach { r ->
-                        put(JSONObject().apply {
-                            put("volume", r.volume)
-                            put("title", r.title)
-                            r.date?.let { put("date", it) }
-                            put("source", r.source)
-                            r.link?.let { put("link", it) }
-                        })
-                    }
-                })
-            })
-        }
-        return root.toString()
-    }
-
-    private fun fromJson(text: String): Map<Long, SeriesReleases> {
-        val root = JSONObject(text)
-        return root.keys().asSequence().associate { key ->
-            val o = root.getJSONObject(key)
-            val array = o.getJSONArray("releases")
-            val releases = (0 until array.length()).map { i ->
-                val r = array.getJSONObject(i)
-                Release(
-                    volume = r.getInt("volume"),
-                    title = r.getString("title"),
-                    date = if (r.has("date")) r.getString("date") else null,
-                    source = r.getString("source"),
-                    link = if (r.has("link")) r.getString("link") else null,
-                )
-            }
-            key.toLong() to SeriesReleases(o.getLong("checkedAt"), releases, o.optInt("notifiedMax", 0))
         }
     }
 }
