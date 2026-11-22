@@ -62,8 +62,10 @@ fun SeriesListScreen(
     onOpen: (Long) -> Unit,
     onAdd: (title: String, totalVolumes: Int?) -> Unit,
     onExport: suspend (Uri) -> Boolean,
-    onReadBackup: suspend (Uri) -> List<Series>?,
-    onReplaceAll: (List<Series>) -> Unit,
+    pendingImport: List<Series>?,
+    onReadBackup: suspend (Uri) -> Boolean,
+    onConfirmImport: () -> Int,
+    onCancelImport: () -> Unit,
     releases: Map<Long, SeriesReleases>,
     onCheckReleases: () -> Unit,
     onCheckUpdate: () -> Unit,
@@ -71,7 +73,6 @@ fun SeriesListScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
-    var pendingImport by remember { mutableStateOf<List<Series>?>(null) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val filtered = remember(series, query) {
@@ -87,9 +88,7 @@ fun SeriesListScreen(
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
-            val imported = onReadBackup(uri)
-            if (imported == null) snackbar.showSnackbar("Ce fichier n'est pas une sauvegarde Manga Reminder")
-            else pendingImport = imported
+            if (!onReadBackup(uri)) snackbar.showSnackbar("Ce fichier n'est pas une sauvegarde Manga Reminder")
         }
     }
 
@@ -197,11 +196,10 @@ fun SeriesListScreen(
         ImportDialog(
             importedCount = imported.size,
             currentCount = series.size,
-            onDismiss = { pendingImport = null },
+            onDismiss = onCancelImport,
             onConfirm = {
-                pendingImport = null
-                onReplaceAll(imported)
-                scope.launch { snackbar.showSnackbar("${imported.size} série(s) importée(s)") }
+                val count = onConfirmImport()
+                scope.launch { snackbar.showSnackbar("$count série(s) importée(s)") }
             },
         )
     }
