@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import androidx.core.content.IntentCompat
+import com.mangareminder.R
+import com.mangareminder.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +19,7 @@ sealed interface UpdateState {
     data class NeedsPermission(val info: UpdateInfo) : UpdateState
     data class Downloading(val info: UpdateInfo, val progress: Float) : UpdateState
     data object Installing : UpdateState
-    data class Failed(val message: String) : UpdateState
+    data class Failed(val message: UiMessage) : UpdateState
 }
 
 /** État partagé entre l'écran et [UpdateInstallReceiver], qui reçoit le résultat d'Android. */
@@ -41,26 +43,27 @@ class UpdateInstallReceiver : BroadcastReceiver() {
                 // Écran système « Mettre à jour cette application ? ».
                 val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
                 if (confirm == null) {
-                    UpdateStatus.set(UpdateState.Failed("Android n'a pas demandé de confirmation."))
+                    UpdateStatus.set(UpdateState.Failed(UiMessage(R.string.update_err_no_confirmation)))
                     return
                 }
                 confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 runCatching { context.startActivity(confirm) }
-                    .onFailure { UpdateStatus.set(UpdateState.Failed("Impossible d'afficher la confirmation d'Android.")) }
+                    .onFailure { UpdateStatus.set(UpdateState.Failed(UiMessage(R.string.update_err_confirmation_failed))) }
             }
             // L'app est redémarrée par Android dans sa nouvelle version.
             PackageInstaller.STATUS_SUCCESS -> UpdateStatus.set(UpdateState.Idle)
-            PackageInstaller.STATUS_FAILURE_ABORTED -> UpdateStatus.set(UpdateState.Failed("Mise à jour annulée."))
+            PackageInstaller.STATUS_FAILURE_ABORTED -> UpdateStatus.set(UpdateState.Failed(UiMessage(R.string.update_err_cancelled)))
             else -> {
                 val detail = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)?.take(200)
                 UpdateStatus.set(
                     UpdateState.Failed(
                         when (status) {
-                            PackageInstaller.STATUS_FAILURE_STORAGE -> "Pas assez de place sur le téléphone."
+                            PackageInstaller.STATUS_FAILURE_STORAGE -> UiMessage(R.string.update_err_storage)
                             PackageInstaller.STATUS_FAILURE_CONFLICT,
                             PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
-                            -> "Android a refusé la mise à jour (signature ou version incompatible)."
-                            else -> "Échec de l'installation" + (detail?.let { " : $it" } ?: ".")
+                            -> UiMessage(R.string.update_err_incompatible)
+                            else -> detail?.let { UiMessage(R.string.update_err_install_failed_detail, it) }
+                                ?: UiMessage(R.string.update_err_install_failed)
                         },
                     ),
                 )

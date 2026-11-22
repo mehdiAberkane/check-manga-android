@@ -1,5 +1,8 @@
 package com.mangareminder.update
 
+import androidx.annotation.StringRes
+import com.mangareminder.R
+import com.mangareminder.UiMessage
 import org.json.JSONException
 import org.json.JSONObject
 import java.net.URI
@@ -29,8 +32,10 @@ private val ALLOWED_HOSTS = setOf(
 
 private val SHA256_HEX = Regex("[0-9a-f]{64}")
 
-/** Erreur à afficher telle quelle à l'utilisateur. */
-class UpdateException(message: String) : Exception(message)
+/** Erreur à afficher à l'utilisateur ; le texte est dans strings.xml. */
+class UpdateException(val uiMessage: UiMessage) : Exception("Mise à jour refusée : $uiMessage") {
+    constructor(@StringRes res: Int, vararg args: Any) : this(UiMessage(res, args.toList()))
+}
 
 data class ReleaseAsset(val name: String, val url: String, val size: Long, val sha256: String?)
 
@@ -59,7 +64,7 @@ fun parseLatestRelease(json: String): LatestRelease {
     try {
         val root = JSONObject(json)
         if (root.optBoolean("draft") || root.optBoolean("prerelease")) {
-            throw UpdateException("La dernière release n'est pas une version stable.")
+            throw UpdateException(R.string.update_err_not_stable)
         }
         val tag = root.getString("tag_name")
         val notes = root.optString("body").take(MAX_NOTES_CHARS)
@@ -78,7 +83,7 @@ fun parseLatestRelease(json: String): LatestRelease {
         }
         return LatestRelease(tag, notes, assets)
     } catch (e: JSONException) {
-        throw UpdateException("Réponse de GitHub illisible.")
+        throw UpdateException(R.string.update_err_github_unreadable)
     }
 }
 
@@ -89,7 +94,7 @@ fun parseUpdate(release: LatestRelease, versionJson: String): UpdateInfo {
     val json = try {
         JSONObject(versionJson)
     } catch (e: JSONException) {
-        throw UpdateException("version.json illisible.")
+        throw UpdateException(R.string.update_err_version_json_unreadable)
     }
     val versionCode = json.optInt("versionCode", -1)
     val versionName = json.optString("versionName")
@@ -97,17 +102,17 @@ fun parseUpdate(release: LatestRelease, versionJson: String): UpdateInfo {
     val sha256 = json.optString("sha256").lowercase()
 
     if (versionCode <= 0 || versionName.isBlank() || versionName.length > 30) {
-        throw UpdateException("version.json incomplet.")
+        throw UpdateException(R.string.update_err_version_json_incomplete)
     }
     if (release.tag != "v$versionName") {
-        throw UpdateException("La release ${release.tag} ne correspond pas à la version $versionName.")
+        throw UpdateException(R.string.update_err_tag_mismatch, release.tag, versionName)
     }
-    if (!sha256.matches(SHA256_HEX)) throw UpdateException("Empreinte SHA-256 absente de version.json.")
+    if (!sha256.matches(SHA256_HEX)) throw UpdateException(R.string.update_err_no_sha)
     val apk = release.assets.find { it.name == apkName && it.name.endsWith(".apk") }
-        ?: throw UpdateException("APK introuvable dans la release ${release.tag}.")
-    if (apk.size !in 1..MAX_APK_BYTES) throw UpdateException("Taille de l'APK invalide.")
+        ?: throw UpdateException(R.string.update_err_apk_missing, release.tag)
+    if (apk.size !in 1..MAX_APK_BYTES) throw UpdateException(R.string.update_err_apk_size)
     if (apk.sha256 != null && apk.sha256 != sha256) {
-        throw UpdateException("L'empreinte de l'APK ne correspond pas à version.json.")
+        throw UpdateException(R.string.update_err_digest_mismatch)
     }
     return UpdateInfo(versionCode, versionName, release.tag, release.notes, apk, sha256)
 }

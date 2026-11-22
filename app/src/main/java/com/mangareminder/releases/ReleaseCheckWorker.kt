@@ -76,7 +76,8 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
         }
 
         ReleaseStore.setError(
-            if (failures > 0) "$failures série(s) non vérifiée(s) : Google Books n'a pas répondu (quota ?)." else null
+            if (failures > 0) applicationContext.resources.getQuantityString(R.plurals.check_failures, failures, failures)
+            else null
         )
         ReleaseNotifier.notify(applicationContext, news)
         if (failures == watched.size) Result.retry() else Result.success()
@@ -131,7 +132,7 @@ object ReleaseNotifier {
         if (news.isEmpty() || !canNotify(context)) return
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL, "Sorties de tomes", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CHANNEL, context.getString(R.string.channel_releases), NotificationManager.IMPORTANCE_DEFAULT)
         )
         val openApp = PendingIntent.getActivity(
             context,
@@ -142,8 +143,8 @@ object ReleaseNotifier {
         news.forEach { (series, release) ->
             val notification = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Nouveau tome : ${series.title}")
-                .setContentText(release.describe())
+                .setContentTitle(context.getString(R.string.notif_new_volume, series.title))
+                .setContentText(release.describe().text(context))
                 .setContentIntent(openApp)
                 .setAutoCancel(true)
                 .build()

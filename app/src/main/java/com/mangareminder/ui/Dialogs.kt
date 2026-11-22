@@ -20,6 +20,9 @@ import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.SeriesRepository
 import com.mangareminder.data.formatVolumes
 import com.mangareminder.data.parseVolumes
+import androidx.compose.ui.res.stringResource
+import com.mangareminder.R
+import androidx.compose.ui.res.pluralStringResource
 
 @Composable
 fun SeriesDialog(
@@ -42,15 +45,15 @@ fun SeriesDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(SeriesRepository.MAX_TITLE_LENGTH) },
-                    label = { Text("Titre") },
+                    label = { Text(stringResource(R.string.field_title)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 )
                 OutlinedTextField(
                     value = total,
                     onValueChange = { total = it.filter(Char::isDigit).take(3) },
-                    label = { Text("Nombre de tomes parus") },
-                    supportingText = { Text("Optionnel : laisse vide si tu ne sais pas") },
+                    label = { Text(stringResource(R.string.field_total)) },
+                    supportingText = { Text(stringResource(R.string.field_total_hint)) },
                     isError = !totalValid,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -61,9 +64,9 @@ fun SeriesDialog(
             TextButton(
                 onClick = { onConfirm(title.trim(), totalValue) },
                 enabled = title.isNotBlank() && totalValid,
-            ) { Text("Enregistrer") }
+            ) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -74,18 +77,21 @@ fun AddVolumesDialog(onDismiss: () -> Unit, onConfirm: (Set<Int>) -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ajouter des tomes") },
+        title = { Text(stringResource(R.string.add_volumes_title)) },
         text = {
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                label = { Text("Tomes possédés") },
+                label = { Text(stringResource(R.string.field_owned)) },
                 placeholder = { Text("ex : 1-12, 15, 17") },
                 supportingText = {
                     when {
-                        input.isBlank() -> Text("Un numéro, une plage (1-12) ou une liste")
-                        parsed == null -> Text("Format non reconnu")
-                        else -> Text("${parsed.size} tome(s) : ${formatVolumes(parsed)}", maxLines = 2)
+                        input.isBlank() -> Text(stringResource(R.string.volumes_hint))
+                        parsed == null -> Text(stringResource(R.string.volumes_invalid))
+                        else -> Text(
+                            pluralStringResource(R.plurals.volumes_preview, parsed.size, parsed.size, formatVolumes(parsed)),
+                            maxLines = 2,
+                        )
                     }
                 },
                 isError = input.isNotBlank() && parsed == null,
@@ -94,9 +100,9 @@ fun AddVolumesDialog(onDismiss: () -> Unit, onConfirm: (Set<Int>) -> Unit) {
             )
         },
         confirmButton = {
-            TextButton(onClick = { parsed?.let(onConfirm) }, enabled = parsed != null) { Text("Ajouter") }
+            TextButton(onClick = { parsed?.let(onConfirm) }, enabled = parsed != null) { Text(stringResource(R.string.action_add)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -104,15 +110,19 @@ fun AddVolumesDialog(onDismiss: () -> Unit, onConfirm: (Set<Int>) -> Unit) {
 fun ImportDialog(importedCount: Int, currentCount: Int, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Importer la sauvegarde ?") },
+        title = { Text(stringResource(R.string.import_title)) },
         text = {
             Text(
-                if (currentCount == 0) "$importedCount série(s) vont être ajoutées."
-                else "Ta collection actuelle ($currentCount série(s)) sera remplacée par les $importedCount série(s) de la sauvegarde."
+                if (currentCount == 0) pluralStringResource(R.plurals.import_add, importedCount, importedCount)
+                else stringResource(
+                    R.string.import_replace,
+                    pluralStringResource(R.plurals.series_count, currentCount, currentCount),
+                    pluralStringResource(R.plurals.series_count, importedCount, importedCount),
+                )
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Importer") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_import)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -120,14 +130,11 @@ fun ImportDialog(importedCount: Int, currentCount: Int, onDismiss: () -> Unit, o
 fun SaveErrorDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Enregistrement impossible") },
+        title = { Text(stringResource(R.string.save_error_title)) },
         text = {
-            Text(
-                "Tes dernières modifications n'ont pas pu être enregistrées sur le téléphone " +
-                    "(stockage plein ?). Libère de la place, puis exporte ta collection pour ne rien perdre."
-            )
+            Text(stringResource(R.string.save_error_text))
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_ok)) } },
     )
 }
 
@@ -135,13 +142,13 @@ fun SaveErrorDialog(onDismiss: () -> Unit) {
 fun DeleteSeriesDialog(title: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Supprimer la série ?") },
-        text = { Text("« $title » et tous ses tomes seront retirés de ta collection.") },
+        title = { Text(stringResource(R.string.delete_title)) },
+        text = { Text(stringResource(R.string.delete_text, title)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Supprimer", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

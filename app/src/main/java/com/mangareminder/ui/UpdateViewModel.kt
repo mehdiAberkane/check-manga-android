@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mangareminder.R
+import com.mangareminder.UiMessage
 import com.mangareminder.update.UpdateException
 import com.mangareminder.update.UpdateInfo
 import com.mangareminder.update.UpdateState
@@ -73,10 +75,10 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
     } catch (e: CancellationException) {
         throw e
     } catch (e: UpdateException) {
-        UpdateState.Failed(e.message ?: "Mise à jour impossible.")
+        UpdateState.Failed(e.uiMessage)
     } catch (e: IOException) {
-        UpdateState.Failed("Connexion à GitHub impossible. Vérifie le réseau et réessaie.")
+        UpdateState.Failed(UiMessage(R.string.update_err_network))
     } catch (e: Exception) {
-        UpdateState.Failed("Mise à jour impossible : ${e.javaClass.simpleName}.")
+        UpdateState.Failed(UiMessage(R.string.update_err_unexpected, e.javaClass.simpleName))
     }
 }
