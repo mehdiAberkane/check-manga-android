@@ -21,21 +21,42 @@ import com.mangareminder.ui.UpdateDialog
 import com.mangareminder.ui.UpdateViewModel
 import com.mangareminder.ui.theme.MangaReminderTheme
 import com.mangareminder.update.UpdateState
+import android.content.Intent
+import androidx.compose.runtime.LaunchedEffect
+import com.mangareminder.ui.ShoppingListScreen
 
 class MainActivity : ComponentActivity() {
+    /** Demande d'ouverture de la liste « À acheter » (widget), consommée par l'écran. */
+    private val openShopping = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) openShopping.value = intent.getBooleanExtra(EXTRA_SHOPPING, false)
         setContent {
             MangaReminderTheme {
-                MangaReminderApp()
+                MangaReminderApp(
+                    openShopping = openShopping.value,
+                    onShoppingOpened = { openShopping.value = false },
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_SHOPPING, false)) openShopping.value = true
+    }
+
+    companion object {
+        const val EXTRA_SHOPPING = "com.mangareminder.SHOPPING"
     }
 }
 
 @Composable
 private fun MangaReminderApp(
+    openShopping: Boolean,
+    onShoppingOpened: () -> Unit,
     viewModel: SeriesViewModel = viewModel(),
     updateViewModel: UpdateViewModel = viewModel(),
 ) {
@@ -53,9 +74,26 @@ private fun MangaReminderApp(
     val undo by viewModel.undo.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showShopping by rememberSaveable { mutableStateOf(false) }
     val selected = series.find { it.id == selectedId }
 
-    if (selected == null) {
+    LaunchedEffect(openShopping) {
+        if (openShopping) {
+            selectedId = null
+            showShopping = true
+            onShoppingOpened()
+        }
+    }
+
+    if (selected == null && showShopping) {
+        BackHandler { showShopping = false }
+        ShoppingListScreen(
+            series = series,
+            releases = releases,
+            onBack = { showShopping = false },
+            onOpen = { selectedId = it },
+        )
+    } else if (selected == null) {
         SeriesListScreen(
             series = series,
             onOpen = { selectedId = it },
@@ -68,6 +106,7 @@ private fun MangaReminderApp(
             releases = releases,
             onCheckReleases = viewModel::checkReleasesNow,
             onCheckUpdate = updateViewModel::check,
+            onOpenShopping = { showShopping = true },
             backupStatus = backupStatus,
             onEnableBackup = viewModel::enableBackup,
             onDisableBackup = viewModel::disableBackup,

@@ -114,6 +114,13 @@
     <string name="sort_missing">Tomes manquants</string>
     <string name="no_match_filter">Aucune série pour ce filtre.</string>
     <string name="series_deleted">« %1$s » supprimée</string>
+    <string name="menu_shopping">Liste à acheter</string>
+    <string name="shopping_title">À acheter</string>
+    <string name="action_share">Partager</string>
+    <string name="shopping_empty">Rien à acheter : ta collection est à jour.</string>
+    <string name="shopping_only_upcoming">Rien de disponible pour l\'instant, seulement des tomes à paraître.</string>
+    <string name="shopping_new_upcoming">%1$d (paraît le %2$s)</string>
+    <string name="shopping_new_published">%1$d (paru le %2$s)</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>

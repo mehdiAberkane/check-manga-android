@@ -4,6 +4,7 @@ import com.mangareminder.data.Series
 import com.mangareminder.releases.Release
 import com.mangareminder.releases.SeriesReleases
 import java.time.LocalDate
+import com.mangareminder.data.shoppingList
 
 // --- Contenu du widget, sans dépendance Android (testé en unitaire). ---
 
@@ -21,23 +22,14 @@ fun widgetSummary(
     releases: Map<Long, SeriesReleases>,
     today: LocalDate = LocalDate.now(),
 ): WidgetSummary {
-    var toBuy = 0
-    val next = mutableListOf<Pair<String, Release>>()
-    for (s in series) {
-        toBuy += s.missingVolumes.size
-        if (!s.watched) continue
-        // Tomes trouvés après le dernier que l'utilisateur connaît (possédé ou compté dans le total).
-        val newer = releases[s.id]?.releases.orEmpty()
-            .filter { it.volume > s.lastKnownVolume }
-            .distinctBy { it.volume }
-        toBuy += newer.count { !it.isUpcoming(today) }
-        newer.minByOrNull { it.volume }?.let { next += s.title to it }
-    }
+    // Même calcul que l'écran « À acheter » : les deux affichent le même nombre.
+    val entries = shoppingList(series, releases)
+    val next = entries.mapNotNull { entry -> entry.newReleases.firstOrNull()?.let { entry.series.title to it } }
     // Sorties datées d'abord (la plus proche en premier), puis les autres par titre.
     val sorted = next.sortedWith(
         compareBy<Pair<String, Release>> { it.second.date == null }
             .thenBy { it.second.date.orEmpty() }
             .thenBy { it.first },
     )
-    return WidgetSummary(toBuy, sorted.take(WIDGET_MAX_RELEASES))
+    return WidgetSummary(entries.sumOf { it.availableCount(today) }, sorted.take(WIDGET_MAX_RELEASES))
 }

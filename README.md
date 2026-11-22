@@ -38,9 +38,11 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   plus petit tome trouvé. Miniatures en HTTPS depuis les serveurs d'images de Google Books uniquement,
   500 Ko au plus, gardées dans le cache de l'app (hors sauvegarde). La couverture choisie est enregistrée
   dans `series.json` (champ `cover`, facultatif) et donc dans l'export.
+- Liste « À acheter » (menu ⋮) : tomes manquants et nouveaux tomes trouvés par la surveillance (parus ou à
+  paraître), toutes séries confondues, avec un bouton Partager (texte simple, ex. « One Piece : 45, 47-48 »).
 - Widget d'écran d'accueil « Tomes à acheter » : nombre de tomes à acheter (manquants, plus les tomes
   déjà parus après le dernier connu des séries surveillées) et les 3 prochaines sorties. Mis à jour après
-  chaque modification et chaque vérification des sorties ; un appui ouvre l'app.
+  chaque modification et chaque vérification des sorties ; un appui ouvre la liste « À acheter ».
 - Mise à jour intégrée (menu ⋮ > « Rechercher une mise à jour ») : l'app lit la dernière release
   stable de GitHub, télécharge son APK et l'installe, sans perdre la collection. Avant l'installation,
   elle vérifie la taille, le SHA-256 (`version.json` et l'empreinte calculée par GitHub), le nom du
