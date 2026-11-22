@@ -30,6 +30,9 @@ class SeriesRepository(dir: File) {
         }
     }
 
+    /** Contenu brut de series.json, ou null s'il n'existe pas. Ne met rien de côté (sauvegarde automatique). */
+    fun readRaw(): String? = file.takeIf { it.exists() }?.readText()
+
     /** @throws IOException si la collection n'a pas pu être écrite. */
     fun save(series: List<Series>) {
         val tmp = File(file.parentFile, "series.json.tmp")
