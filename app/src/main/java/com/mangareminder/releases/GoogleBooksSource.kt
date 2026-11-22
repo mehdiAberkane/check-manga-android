@@ -38,14 +38,13 @@ object GoogleBooksSource : ReleaseSource {
             Release(
                 volume = volume,
                 title = title,
-                date = info.optString("publishedDate").takeIf { it.matches(DATE) },
+                date = info.optString("publishedDate").takeIf { it.matches(RELEASE_DATE) },
                 source = name,
-                link = info.optString("infoLink").takeIf { it.startsWith("https://") },
-            )
+                link = info.optString("infoLink").takeIf { isSafeLink(it) },
+            ).sanitized()
         }
     }
 
-    private val DATE = Regex("\\d{4}(-\\d{2}(-\\d{2})?)?")
 }
 
 object Http {
