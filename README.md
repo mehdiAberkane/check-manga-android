@@ -20,6 +20,11 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 
   L'API Google Books est appelée sans clé : son quota est partagé, une vérification peut échouer
   et sera retentée plus tard.
+- Couvertures : la fiche d'une série propose « Choisir la couverture » parmi celles trouvées sur Google
+  Books (une recherche, seulement à la demande). Sans choix, une série surveillée prend la couverture du
+  plus petit tome trouvé. Miniatures en HTTPS depuis les serveurs d'images de Google Books uniquement,
+  500 Ko au plus, gardées dans le cache de l'app (hors sauvegarde). La couverture choisie est enregistrée
+  dans `series.json` (champ `cover`, facultatif) et donc dans l'export.
 - Mise à jour intégrée (menu ⋮ > « Rechercher une mise à jour ») : l'app lit la dernière release
   stable de GitHub, télécharge son APK et l'installe, sans perdre la collection. Avant l'installation,
   elle vérifie la taille, le SHA-256 (`version.json` et l'empreinte calculée par GitHub), le nom du

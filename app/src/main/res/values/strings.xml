@@ -60,6 +60,14 @@
     <string name="no_release_found">Aucun tome trouvé pour ce titre. Vérifie qu\'il est écrit comme sur la couverture.</string>
     <string name="open_book">Voir la fiche du livre</string>
     <string name="checked_at">Vérifié le %1$s · source : %2$s</string>
+    <string name="cover_choose">Choisir la couverture</string>
+    <string name="cover_dialog_title">Couverture de la série</string>
+    <string name="cover_searching">Recherche des couvertures…</string>
+    <string name="cover_none_found">Aucune couverture trouvée pour ce titre. Vérifie qu\'il est écrit comme sur la couverture.</string>
+    <string name="cover_search_failed">Google Books ne répond pas (quota ?). Réessaie plus tard.</string>
+    <string name="cover_search_partial">Google Books ne répond pas : voici les couvertures déjà connues.</string>
+    <string name="cover_auto">Couverture automatique</string>
+    <string name="cover_of">Couverture de %1$s</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>

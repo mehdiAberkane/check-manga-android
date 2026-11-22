@@ -7,13 +7,18 @@ import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
 import com.mangareminder.data.seriesOrder
+import androidx.lifecycle.viewModelScope
+import com.mangareminder.releases.GoogleBooksSource
+import com.mangareminder.releases.Release
 import com.mangareminder.releases.ReleaseScheduler
+import com.mangareminder.releases.coverChoices
 import com.mangareminder.releases.ReleaseStore
 import com.mangareminder.releases.SeriesReleases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -60,6 +65,40 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     /** La tâche de fond relit series.json : on attend que les écritures en cours soient faites. */
     private fun afterSave(action: () -> Unit) {
         saver.execute(action)
+    }
+
+    private val _coverSearch = MutableStateFlow<CoverSearch?>(null)
+    /** Recherche de couvertures en cours ou terminée, pour le choix de la couverture d'une série. */
+    val coverSearch: StateFlow<CoverSearch?> = _coverSearch.asStateFlow()
+
+    /**
+     * Une seule recherche Google Books, lancée par l'utilisateur (le quota de l'API est partagé).
+     * Si elle échoue, on propose au moins les couvertures déjà trouvées par la surveillance.
+     */
+    fun searchCovers(series: Series) {
+        if (_coverSearch.value == CoverSearch.Loading) return
+        _coverSearch.value = CoverSearch.Loading
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) { runCatching { GoogleBooksSource.search(series.title) } }
+            val cached = releases.value[series.id]?.releases.orEmpty()
+            _coverSearch.value = found.fold(
+                onSuccess = { CoverSearch.Results(coverChoices(it + cached)) },
+                onFailure = {
+                    if (coverChoices(cached).isEmpty()) CoverSearch.Failed
+                    else CoverSearch.Results(coverChoices(cached), partial = true)
+                },
+            )
+        }
+    }
+
+    /** null : revenir à la couverture automatique. */
+    fun chooseCover(id: Long, url: String?) {
+        updateSeries(id) { it.copy(cover = url) }
+        _coverSearch.value = null
+    }
+
+    fun dismissCoverSearch() {
+        _coverSearch.value = null
     }
 
     fun dismissSaveError() {
@@ -178,4 +217,11 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         saver.shutdown()
     }
+}
+
+sealed interface CoverSearch {
+    data object Loading : CoverSearch
+    /** partial : Google Books n'a pas répondu, seules les couvertures déjà connues sont proposées. */
+    data class Results(val choices: List<Release>, val partial: Boolean = false) : CoverSearch
+    data object Failed : CoverSearch
 }

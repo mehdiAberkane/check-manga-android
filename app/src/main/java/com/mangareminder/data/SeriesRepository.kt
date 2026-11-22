@@ -1,6 +1,7 @@
 package com.mangareminder.data
 
 import android.content.Context
+import com.mangareminder.releases.isSafeCoverUrl
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -49,6 +50,7 @@ class SeriesRepository(dir: File) {
                     s.totalVolumes?.let { put("total", it) }
                     put("owned", JSONArray(s.ownedVolumes.sorted()))
                     if (s.watched) put("watched", true)
+                    s.cover?.let { put("cover", it) }
                 })
             }
             return array.toString()
@@ -77,6 +79,8 @@ class SeriesRepository(dir: File) {
                     totalVolumes = total,
                     ownedVolumes = volumes,
                     watched = o.optBoolean("watched", false),
+                    // Champ facultatif : une adresse invalide est ignorée plutôt que de refuser la sauvegarde.
+                    cover = o.optString("cover").takeIf { isSafeCoverUrl(it) },
                 )
             }
             if (series.distinctBy { it.id }.size != series.size) throw JSONException("Identifiants en double")

@@ -46,6 +46,7 @@ private fun MangaReminderApp(
     val checkError by viewModel.checkError.collectAsStateWithLifecycle()
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     val pendingImport by viewModel.pendingImport.collectAsStateWithLifecycle()
+    val coverSearch by viewModel.coverSearch.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
@@ -81,6 +82,10 @@ private fun MangaReminderApp(
             checkError = checkError,
             onToggleWatch = { viewModel.toggleWatch(selected.id) },
             onCheckNow = viewModel::checkReleasesNow,
+            coverSearch = coverSearch,
+            onSearchCovers = { viewModel.searchCovers(selected) },
+            onChooseCover = { viewModel.chooseCover(selected.id, it) },
+            onDismissCoverSearch = viewModel::dismissCoverSearch,
         )
     }
 

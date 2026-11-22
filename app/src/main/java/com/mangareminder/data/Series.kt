@@ -12,6 +12,8 @@ data class Series(
     val ownedVolumes: Set<Int> = emptySet(),
     /** Surveillance des sorties : l'app cherche régulièrement les nouveaux tomes. */
     val watched: Boolean = false,
+    /** Couverture choisie (miniature Google Books) ; null : couverture automatique, s'il y en a une. */
+    val cover: String? = null,
 ) {
     val ownedCount: Int get() = ownedVolumes.size
 

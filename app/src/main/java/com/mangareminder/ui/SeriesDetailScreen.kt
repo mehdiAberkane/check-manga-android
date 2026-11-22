@@ -69,6 +69,12 @@ import java.util.Date
 import androidx.compose.ui.res.stringResource
 import com.mangareminder.R
 import com.mangareminder.releases.GoogleBooksSource
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.TextButton
+import com.mangareminder.releases.autoCover
 
 @Composable
 fun SeriesDetailScreen(
@@ -83,6 +89,10 @@ fun SeriesDetailScreen(
     checkError: String?,
     onToggleWatch: () -> Unit,
     onCheckNow: () -> Unit,
+    coverSearch: CoverSearch?,
+    onSearchCovers: () -> Unit,
+    onChooseCover: (String?) -> Unit,
+    onDismissCoverSearch: () -> Unit,
 ) {
     val context = LocalContext.current
     // Android 13+ : la permission de notifier est demandée quand on active la surveillance.
@@ -149,7 +159,7 @@ fun SeriesDetailScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SummaryCard(series)
+                SummaryCard(series, cover = series.cover ?: releases.autoCover(), onChooseCover = onSearchCovers)
             }
             if (series.watched) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -207,6 +217,15 @@ fun SeriesDetailScreen(
             },
         )
     }
+    coverSearch?.let {
+        CoverChooserDialog(
+            search = it,
+            hasChosenCover = series.cover != null,
+            onChoose = onChooseCover,
+            onDismiss = onDismissCoverSearch,
+        )
+    }
+
     if (showDelete) {
         DeleteSeriesDialog(
             title = series.title,
@@ -229,19 +248,32 @@ fun SeriesDetailScreen(
 }
 
 @Composable
-private fun SummaryCard(series: Series) {
+private fun SummaryCard(series: Series, cover: String?, onChooseCover: () -> Unit) {
     val missing = series.missingVolumes
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(ownedSummary(series), style = MaterialTheme.typography.titleMedium)
-            when {
-                series.isComplete -> Text(stringResource(R.string.series_complete))
-                missing.isNotEmpty() -> Text(stringResource(R.string.missing_volumes, formatVolumes(missing)))
-                series.totalVolumes == null && series.ownedCount > 0 ->
-                    Text(stringResource(R.string.next_to_buy, series.lastOwned + 1))
+        Row(Modifier.padding(16.dp)) {
+            cover?.let {
+                CoverImage(
+                    it,
+                    contentDescription = stringResource(R.string.cover_of, series.title),
+                    modifier = Modifier.size(width = 72.dp, height = 108.dp),
+                )
+                Spacer(Modifier.width(16.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(ownedSummary(series), style = MaterialTheme.typography.titleMedium)
+                when {
+                    series.isComplete -> Text(stringResource(R.string.series_complete))
+                    missing.isNotEmpty() -> Text(stringResource(R.string.missing_volumes, formatVolumes(missing)))
+                    series.totalVolumes == null && series.ownedCount > 0 ->
+                        Text(stringResource(R.string.next_to_buy, series.lastOwned + 1))
+                }
+                TextButton(onClick = onChooseCover, contentPadding = PaddingValues(0.dp)) {
+                    Text(stringResource(R.string.cover_choose))
+                }
             }
         }
     }
@@ -294,20 +326,29 @@ private fun ReleasesCard(
                 )
                 else -> releases.releases.take(MAX_SHOWN_RELEASES).forEach { release ->
                     val isNew = release.volume > series.lastKnownVolume
-                    Text(
-                        release.describe().text().let { if (isNew) stringResource(R.string.new_release, it) else it },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isNew) FontWeight.Bold else FontWeight.Normal,
-                        color = if (release.link != null) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = release.link?.let { link ->
                             Modifier
+                                .fillMaxWidth()
                                 .clickable(role = Role.Button, onClickLabel = stringResource(R.string.open_book)) {
                                     uriHandler.openUri(link)
                                 }
                                 .padding(vertical = 2.dp)
-                        } ?: Modifier,
-                    )
+                        } ?: Modifier.fillMaxWidth(),
+                    ) {
+                        release.cover?.let {
+                            CoverImage(it, contentDescription = null, modifier = Modifier.size(width = 32.dp, height = 48.dp))
+                            Spacer(Modifier.width(12.dp))
+                        }
+                        Text(
+                            release.describe().text().let { if (isNew) stringResource(R.string.new_release, it) else it },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isNew) FontWeight.Bold else FontWeight.Normal,
+                            color = if (release.link != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
             releases?.let {

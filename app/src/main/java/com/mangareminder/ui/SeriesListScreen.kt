@@ -59,6 +59,10 @@ import androidx.compose.ui.res.stringResource
 import com.mangareminder.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import com.mangareminder.releases.autoCover
 
 @Composable
 fun SeriesListScreen(
@@ -179,7 +183,7 @@ fun SeriesListScreen(
                 ) {
                     items(filtered, key = { it.id }) { s ->
                         val newRelease = if (s.watched) releases[s.id]?.newRelease(s.lastKnownVolume) else null
-                        SeriesCard(s, newRelease, onClick = { onOpen(s.id) })
+                        SeriesCard(s, newRelease, cover = s.cover ?: releases[s.id].autoCover(), onClick = { onOpen(s.id) })
                     }
                 }
             }
@@ -212,64 +216,70 @@ fun SeriesListScreen(
 }
 
 @Composable
-private fun SeriesCard(series: Series, newRelease: Release?, onClick: () -> Unit) {
+private fun SeriesCard(series: Series, newRelease: Release?, cover: String?, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    series.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (series.watched) {
-                    Icon(
-                        Icons.Outlined.Notifications,
-                        contentDescription = stringResource(R.string.watched_releases),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
-                if (series.isComplete) {
+        Row(Modifier.padding(16.dp)) {
+            cover?.let {
+                CoverImage(it, contentDescription = null, modifier = Modifier.size(width = 48.dp, height = 72.dp))
+                Spacer(Modifier.width(12.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        stringResource(R.string.complete_badge),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp),
+                        series.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (series.watched) {
+                        Icon(
+                            Icons.Outlined.Notifications,
+                            contentDescription = stringResource(R.string.watched_releases),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                    if (series.isComplete) {
+                        Text(
+                            stringResource(R.string.complete_badge),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+                Text(
+                    ownedSummary(series),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                series.totalVolumes?.let { total ->
+                    LinearProgressIndicator(
+                        progress = { (series.ownedCount.toFloat() / total).coerceAtMost(1f) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
-            }
-            Text(
-                ownedSummary(series),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            series.totalVolumes?.let { total ->
-                LinearProgressIndicator(
-                    progress = { (series.ownedCount.toFloat() / total).coerceAtMost(1f) },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
-            }
-            newRelease?.let {
-                Text(
-                    stringResource(R.string.new_release, it.describe().text()),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-            }
-            val missing = series.missingVolumes
-            if (missing.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.missing_volumes, formatVolumes(missing)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
+                newRelease?.let {
+                    Text(
+                        stringResource(R.string.new_release, it.describe().text()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                val missing = series.missingVolumes
+                if (missing.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.missing_volumes, formatVolumes(missing)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
             }
         }
     }

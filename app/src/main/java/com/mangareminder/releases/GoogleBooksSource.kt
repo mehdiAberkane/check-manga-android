@@ -28,7 +28,12 @@ object GoogleBooksSource : ReleaseSource {
             "https://www.googleapis.com/books/v1/volumes?q=$query" +
                 "&langRestrict=fr&printType=books&orderBy=newest&maxResults=40"
         )
-        val items = JSONObject(Http.get(url)).optJSONArray("items") ?: return emptyList()
+        return parse(Http.get(url), seriesTitle)
+    }
+
+    /** Tomes de la série dans une réponse de l'API (sans réseau : testé en unitaire). */
+    fun parse(json: String, seriesTitle: String): List<Release> {
+        val items = JSONObject(json).optJSONArray("items") ?: return emptyList()
         return (0 until items.length()).mapNotNull { i ->
             val info = items.getJSONObject(i).optJSONObject("volumeInfo") ?: return@mapNotNull null
             val title = listOf(info.optString("title"), info.optString("subtitle"))
@@ -41,6 +46,7 @@ object GoogleBooksSource : ReleaseSource {
                 date = info.optString("publishedDate").takeIf { it.matches(RELEASE_DATE) },
                 source = name,
                 link = info.optString("infoLink").takeIf { isSafeLink(it) },
+                cover = normalizeCoverUrl(info.optJSONObject("imageLinks")?.optString("thumbnail")),
             ).sanitized()
         }
     }
@@ -55,7 +61,13 @@ object Http {
      * HTTPS uniquement : une adresse ou une redirection vers un autre schéma est refusée.
      * @throws IOException en cas d'erreur réseau, de réponse non 200 ou d'adresse non HTTPS.
      */
-    fun get(url: URL): String {
+    fun get(url: URL): String = getBytes(url, MAX_BYTES).toString(Charsets.UTF_8)
+
+    /**
+     * Comme [get], en octets, avec une taille maximale donnée (images).
+     * @throws IOException en cas d'erreur réseau, de réponse non 200, de réponse trop grosse ou d'adresse non HTTPS.
+     */
+    fun getBytes(url: URL, maxBytes: Int): ByteArray {
         var current = requireHttps(url)
         repeat(MAX_REDIRECTS + 1) {
             val connection = current.openConnection() as HttpURLConnection
@@ -65,7 +77,7 @@ object Http {
                 connection.connectTimeout = 15_000
                 connection.readTimeout = 15_000
                 connection.setRequestProperty("User-Agent", "MangaReminder (Android)")
-                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("Accept", "application/json, image/*")
                 when (val code = connection.responseCode) {
                     HttpURLConnection.HTTP_OK -> return connection.inputStream.use { input ->
                         val out = ByteArrayOutputStream()
@@ -74,9 +86,9 @@ object Http {
                             val n = input.read(buffer)
                             if (n == -1) break
                             out.write(buffer, 0, n)
-                            if (out.size() > MAX_BYTES) throw IOException("Réponse trop volumineuse")
+                            if (out.size() > maxBytes) throw IOException("Réponse trop volumineuse")
                         }
-                        out.toString(Charsets.UTF_8.name())
+                        out.toByteArray()
                     }
                     301, 302, 303, 307, 308 -> current = redirectTarget(current, connection.getHeaderField("Location"))
                     else -> throw IOException("HTTP $code")
