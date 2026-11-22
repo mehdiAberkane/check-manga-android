@@ -1,9 +1,23 @@
-# Mises à jour des actions GitHub épinglées par SHA dans les workflows.
+# Mises à jour proposées chaque semaine par Dependabot.
 version: 2
 updates:
+  # Actions GitHub épinglées par SHA dans les workflows.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: "CI"
+
+  # Plugins et bibliothèques de gradle/libs.versions.toml, en une seule PR par semaine.
+  # Dependabot ne met pas à jour gradle/verification-metadata.xml : la CI de ces PR échoue
+  # tant que le fichier n'est pas régénéré (procédure dans le README).
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "Dépendances"
+    groups:
+      gradle:
+        patterns: ["*"]

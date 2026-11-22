@@ -2,9 +2,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
 }
 
 // Clé de signature release : fichier local, jamais versionné (voir README).
@@ -15,12 +14,18 @@ val keystore = Properties().apply {
 
 android {
     namespace = "com.mangareminder"
-    compileSdk = 35
+    // API disponibles à la compilation (exigé par les bibliothèques AndroidX récentes).
+    // Le comportement de l'app suit targetSdk, qui reste sur Android 16 (36).
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 2
+        }
+    }
 
     defaultConfig {
         applicationId = "com.mangareminder"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 5
         versionName = "1.4"
     }
@@ -62,18 +67,18 @@ kotlin {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    testImplementation("junit:junit:4.13.2")
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.work.runtime.ktx)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    testImplementation(libs.junit)
     // org.json d'android.jar n'est qu'un bouchon en tests JVM.
-    testImplementation("org.json:json:20240303")
+    testImplementation(libs.json)
 }
