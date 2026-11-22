@@ -113,6 +113,7 @@
     <string name="sort_added">Ajout récent</string>
     <string name="sort_missing">Tomes manquants</string>
     <string name="no_match_filter">Aucune série pour ce filtre.</string>
+    <string name="series_deleted">« %1$s » supprimée</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>

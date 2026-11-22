@@ -71,6 +71,9 @@ import androidx.compose.material3.Button
 import com.mangareminder.data.ListFilter
 import com.mangareminder.data.ListSort
 import com.mangareminder.data.applyListOptions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 
 @Composable
 fun SeriesListScreen(
@@ -80,7 +83,7 @@ fun SeriesListScreen(
     onExport: suspend (Uri) -> Boolean,
     pendingImport: List<Series>?,
     onReadBackup: suspend (Uri) -> Boolean,
-    onConfirmImport: () -> Int,
+    onConfirmImport: () -> Unit,
     onCancelImport: () -> Unit,
     releases: Map<Long, SeriesReleases>,
     onCheckReleases: () -> Unit,
@@ -94,6 +97,9 @@ fun SeriesListScreen(
     listSort: ListSort,
     onListFilter: (ListFilter) -> Unit,
     onListSort: (ListSort) -> Unit,
+    undo: UndoAction?,
+    onUndo: () -> Unit,
+    onForgetUndo: (UndoAction) -> Unit,
 ) {
     var showBackup by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -103,6 +109,19 @@ fun SeriesListScreen(
     // Textes des snackbars, lus hors composition (dans les callbacks).
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(undo) {
+        val action = undo ?: return@LaunchedEffect
+        val message = when (action) {
+            is UndoAction.Deleted -> resources.getString(R.string.series_deleted, action.series.title)
+            is UndoAction.Imported -> resources.getQuantityString(R.plurals.series_imported, action.count, action.count)
+        }
+        val result = snackbar.showSnackbar(
+            message,
+            actionLabel = resources.getString(R.string.action_cancel),
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) onUndo() else onForgetUndo(action)
+    }
     val filtered = remember(series, query, listFilter, listSort, releases) {
         applyListOptions(searchResults(series, query), listFilter, listSort) { s ->
             releases[s.id]?.newRelease(s.lastKnownVolume) != null
@@ -280,10 +299,7 @@ fun SeriesListScreen(
             importedCount = imported.size,
             currentCount = series.size,
             onDismiss = onCancelImport,
-            onConfirm = {
-                val count = onConfirmImport()
-                scope.launch { snackbar.showSnackbar(resources.getQuantityString(R.plurals.series_imported, count, count)) }
-            },
+            onConfirm = onConfirmImport,
         )
     }
 }

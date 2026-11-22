@@ -103,6 +103,13 @@ const val MAX_VOLUME = 999
 
 const val MAX_BORROWER_LENGTH = 50
 
+/**
+ * Remet une série supprimée dans la collection. Si une série du même id est revenue entre-temps
+ * (import…), on ne crée pas de doublon : les id doivent rester uniques.
+ */
+fun restoreSeries(current: List<Series>, deleted: Series): List<Series> =
+    if (current.any { it.id == deleted.id }) current else current + deleted
+
 /** Prêt d'un tome : à qui (nom libre) et depuis quand (« 2026-11-22 », facultatif). */
 data class Loan(val to: String, val date: String? = null)
 
