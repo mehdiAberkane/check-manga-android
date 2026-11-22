@@ -83,6 +83,11 @@
     <string name="backup_error_access">Le dossier de sauvegarde n\'est plus accessible : choisis-en un autre.</string>
     <string name="backup_error_write">La dernière sauvegarde a échoué, elle sera retentée.</string>
     <string name="backup_folder_refused">Ce dossier ne peut pas être utilisé pour la sauvegarde.</string>
+    <string name="widget_label">Tomes à acheter</string>
+    <string name="widget_description">Tomes à acheter et prochaines sorties de tes séries surveillées</string>
+    <string name="widget_nothing_to_buy">Collection à jour</string>
+    <string name="widget_no_release">Aucune sortie trouvée pour les séries surveillées</string>
+    <string name="widget_release_line">%1$s · %2$s</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>
@@ -165,5 +170,10 @@
         <item quantity="one">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, le dernier est gardé. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
         <item quantity="many">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
         <item quantity="other">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
+    </plurals>
+    <plurals name="widget_to_buy">
+        <item quantity="one">%d tome à acheter</item>
+        <item quantity="many">%d tomes à acheter</item>
+        <item quantity="other">%d tomes à acheter</item>
     </plurals>
 </resources>

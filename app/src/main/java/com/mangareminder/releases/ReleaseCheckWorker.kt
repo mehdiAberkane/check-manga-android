@@ -24,6 +24,7 @@ import com.mangareminder.MainActivity
 import com.mangareminder.R
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
+import com.mangareminder.widget.MangaWidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONException
@@ -80,6 +81,7 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
             else null
         )
         ReleaseNotifier.notify(applicationContext, news)
+        MangaWidgetUpdater.update(applicationContext)
         if (failures == watched.size) Result.retry() else Result.success()
     }
 
