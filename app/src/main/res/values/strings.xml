@@ -141,6 +141,8 @@
     <string name="unreadable_start_empty">Repartir d\'une collection vide</string>
     <string name="unreadable_start_empty_text">Ta collection sera vide. Le fichier abîmé reste mis de côté sur le téléphone, mais il sera remplacé à la prochaine modification. Exporte-le d\'abord si tu veux le garder.</string>
     <string name="unreadable_start_empty_confirm">Repartir de zéro</string>
+    <string name="notifications_blocked">Notifications désactivées : les nouveautés ne s\'afficheront que dans l\'app.</string>
+    <string name="notifications_settings">Activer les notifications</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>
