@@ -89,6 +89,7 @@ fun SeriesListScreen(
     onCheckReleases: () -> Unit,
     onCheckUpdate: () -> Unit,
     onOpenShopping: () -> Unit,
+    onScan: () -> Unit,
     backupStatus: BackupStatus,
     onEnableBackup: (Uri) -> Boolean,
     onDisableBackup: () -> Unit,
@@ -153,6 +154,13 @@ fun SeriesListScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_scan)) },
+                            onClick = {
+                                menuOpen = false
+                                onScan()
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.menu_shopping)) },
                             enabled = series.isNotEmpty(),

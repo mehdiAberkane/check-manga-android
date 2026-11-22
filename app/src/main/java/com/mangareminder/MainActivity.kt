@@ -24,6 +24,8 @@ import com.mangareminder.update.UpdateState
 import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
 import com.mangareminder.ui.ShoppingListScreen
+import com.mangareminder.ui.ScanDialog
+import com.mangareminder.ui.startBarcodeScan
 
 class MainActivity : ComponentActivity() {
     /** Demande d'ouverture de la liste « À acheter » (widget), consommée par l'écran. */
@@ -72,7 +74,9 @@ private fun MangaReminderApp(
     val listFilter by viewModel.listFilter.collectAsStateWithLifecycle()
     val listSort by viewModel.listSort.collectAsStateWithLifecycle()
     val undo by viewModel.undo.collectAsStateWithLifecycle()
+    val scan by viewModel.scan.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val startScan = { startBarcodeScan(context, onCode = viewModel::lookupIsbn, onUnavailable = viewModel::scanManually) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showShopping by rememberSaveable { mutableStateOf(false) }
     val selected = series.find { it.id == selectedId }
@@ -107,6 +111,7 @@ private fun MangaReminderApp(
             onCheckReleases = viewModel::checkReleasesNow,
             onCheckUpdate = updateViewModel::check,
             onOpenShopping = { showShopping = true },
+            onScan = startScan,
             backupStatus = backupStatus,
             onEnableBackup = viewModel::enableBackup,
             onDisableBackup = viewModel::disableBackup,
@@ -153,6 +158,20 @@ private fun MangaReminderApp(
             onInstall = updateViewModel::install,
             onOpenPermission = { context.startActivity(updateViewModel.permissionSettings(it)) },
             onDismiss = updateViewModel::dismiss,
+        )
+    }
+
+    scan?.let { state ->
+        ScanDialog(
+            state = state,
+            onIsbn = viewModel::lookupIsbn,
+            onScanAgain = {
+                viewModel.dismissScan()
+                startScan()
+            },
+            onMarkOwned = viewModel::markScannedOwned,
+            onCreateSeries = { selectedId = viewModel.createScannedSeries(it) },
+            onDismiss = viewModel::dismissScan,
         )
     }
 

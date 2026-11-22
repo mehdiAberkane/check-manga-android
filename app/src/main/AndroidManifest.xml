@@ -29,6 +29,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Scanner de code-barres (services Play) téléchargé dès l'installation plutôt qu'au premier scan. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+
         <!-- Widget d'écran d'accueil (exporté : c'est le lanceur qui l'appelle). -->
         <receiver
             android:name=".widget.MangaWidget"
