@@ -19,6 +19,9 @@ interface ReleaseSource {
  * API publique Google Books, sans clé : le quota est partagé entre toutes les applis
  * qui l'appellent ainsi, une vérification peut donc échouer et sera retentée plus tard.
  */
+/** Seul hôte de l'API Google Books (recherche des sorties, ISBN). */
+val GOOGLE_BOOKS_HOSTS = setOf("www.googleapis.com")
+
 object GoogleBooksSource : ReleaseSource {
     override val name = "Google Books"
 
@@ -28,7 +31,7 @@ object GoogleBooksSource : ReleaseSource {
             "https://www.googleapis.com/books/v1/volumes?q=$query" +
                 "&langRestrict=fr&printType=books&orderBy=newest&maxResults=40"
         )
-        return parse(Http.get(url), seriesTitle)
+        return parse(Http.get(url, GOOGLE_BOOKS_HOSTS), seriesTitle)
     }
 
     /** Tomes de la série dans une réponse de l'API (sans réseau : testé en unitaire). */
@@ -60,17 +63,18 @@ object Http {
     private const val MAX_REDIRECTS = 5
 
     /**
-     * HTTPS uniquement : une adresse ou une redirection vers un autre schéma est refusée.
-     * @throws IOException en cas d'erreur réseau, de réponse non 200 ou d'adresse non HTTPS.
+     * HTTPS uniquement, vers les [hosts] donnés : une adresse ou une redirection vers un autre
+     * schéma ou un autre hôte est refusée (même règle que le module de mise à jour).
+     * @throws IOException en cas d'erreur réseau, de réponse non 200 ou d'adresse refusée.
      */
-    fun get(url: URL): String = getBytes(url, MAX_BYTES).toString(Charsets.UTF_8)
+    fun get(url: URL, hosts: Set<String>): String = getBytes(url, MAX_BYTES, hosts).toString(Charsets.UTF_8)
 
     /**
      * Comme [get], en octets, avec une taille maximale donnée (images).
-     * @throws IOException en cas d'erreur réseau, de réponse non 200, de réponse trop grosse ou d'adresse non HTTPS.
+     * @throws IOException en cas d'erreur réseau, de réponse non 200, de réponse trop grosse ou d'adresse refusée.
      */
-    fun getBytes(url: URL, maxBytes: Int): ByteArray {
-        var current = requireHttps(url)
+    fun getBytes(url: URL, maxBytes: Int, hosts: Set<String>): ByteArray {
+        var current = requireAllowed(url, hosts)
         repeat(MAX_REDIRECTS + 1) {
             val connection = current.openConnection() as HttpURLConnection
             try {
@@ -92,7 +96,8 @@ object Http {
                         }
                         out.toByteArray()
                     }
-                    301, 302, 303, 307, 308 -> current = redirectTarget(current, connection.getHeaderField("Location"))
+                    301, 302, 303, 307, 308 ->
+                        current = redirectTarget(current, connection.getHeaderField("Location"), hosts)
                     else -> throw IOException("HTTP $code")
                 }
             } finally {
@@ -102,10 +107,19 @@ object Http {
         throw IOException("Trop de redirections")
     }
 
-    /** Adresse de la redirection, résolue par rapport à la page courante ; HTTPS obligatoire. */
-    fun redirectTarget(current: URL, location: String?): URL {
+    /** Adresse de la redirection, résolue par rapport à la page courante ; HTTPS et hôte autorisé obligatoires. */
+    fun redirectTarget(current: URL, location: String?, hosts: Set<String>): URL {
         if (location.isNullOrBlank()) throw IOException("Redirection sans adresse")
-        return requireHttps(URL(current, location))
+        return requireAllowed(URL(current, location), hosts)
+    }
+
+    /** HTTPS, hôte de la liste, sans identifiants ni port exotique. */
+    fun requireAllowed(url: URL, hosts: Set<String>): URL {
+        requireHttps(url)
+        if (url.host.lowercase() !in hosts || url.userInfo != null || url.port !in setOf(-1, 443)) {
+            throw IOException("Hôte non autorisé : ${url.host}")
+        }
+        return url
     }
 
     fun requireHttps(url: URL): URL {
