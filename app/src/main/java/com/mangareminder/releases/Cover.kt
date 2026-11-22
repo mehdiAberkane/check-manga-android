@@ -8,7 +8,7 @@ import java.security.MessageDigest
 // venir d'un import) : elles sont revalidées partout où on les lit.
 
 /** Serveurs d'images de Google Books. Aucun autre hôte n'est contacté pour une couverture. */
-private val COVER_HOSTS = setOf("books.google.com", "books.googleusercontent.com")
+val COVER_HOSTS = setOf("books.google.com", "books.googleusercontent.com")
 
 private const val MAX_COVER_URL_LENGTH = 1_000
 

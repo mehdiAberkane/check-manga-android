@@ -40,6 +40,7 @@ import com.mangareminder.data.ScanMatch
 import com.mangareminder.data.matchScannedBook
 import com.mangareminder.data.normalizeIsbn
 import com.mangareminder.data.parseIsbnLookup
+import com.mangareminder.releases.GOOGLE_BOOKS_HOSTS
 import com.mangareminder.releases.Http
 import java.net.URL
 import com.mangareminder.data.LoadResult
@@ -178,7 +179,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val title = withContext(Dispatchers.IO) {
                 runCatching {
-                    parseIsbnLookup(Http.get(URL("https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn")))
+                    parseIsbnLookup(Http.get(URL("https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn"), GOOGLE_BOOKS_HOSTS))
                 }
             }
             // La recherche peut avoir été fermée entre-temps.

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.mangareminder.releases.COVER_HOSTS
 import com.mangareminder.releases.Http
 import com.mangareminder.releases.MAX_COVER_BYTES
 import com.mangareminder.releases.coverCacheName
@@ -46,7 +47,7 @@ object CoverCache {
         val dir = File(context.cacheDir, "covers").apply { mkdirs() }
         val file = File(dir, coverCacheName(url))
         val bytes = file.takeIf { it.length() in 1..MAX_COVER_BYTES.toLong() }?.readBytes()
-            ?: runCatching { Http.getBytes(URL(url), MAX_COVER_BYTES) }.getOrNull()?.also { downloaded ->
+            ?: runCatching { Http.getBytes(URL(url), MAX_COVER_BYTES, COVER_HOSTS) }.getOrNull()?.also { downloaded ->
                 runCatching {
                     val tmp = File(dir, "${file.name}.tmp")
                     tmp.writeBytes(downloaded)
