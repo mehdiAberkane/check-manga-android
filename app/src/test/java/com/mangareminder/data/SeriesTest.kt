@@ -64,4 +64,45 @@ class SeriesTest {
         assertEquals(6, Series(1, "A", ownedVolumes = setOf(2, 6)).lastOwned)
         assertEquals(2, Series(1, "A", ownedVolumes = setOf(2, 6)).ownedCount)
     }
+
+    @Test
+    fun `clé de recherche sans accents, casse ni ponctuation`() {
+        assertEquals("dede", searchKey("Dédé"))
+        assertEquals("l attaque des titans", searchKey("L’Attaque des Titans"))
+        assertEquals("l attaque des titans", searchKey("l'attaque  des titans "))
+        assertEquals("one piece", searchKey("ONE-PIECE"))
+        assertEquals("ワンピース", searchKey("ワンピース"))
+        assertEquals("", searchKey(" ’ - "))
+    }
+
+    @Test
+    fun `recherche identique avec ou sans accents ni apostrophes typographiques`() {
+        assertTrue(matchesSearch("Dédé", "dede"))
+        assertTrue(matchesSearch("Dede", "dédé"))
+        assertTrue(matchesSearch("L’Attaque des Titans", "l'attaque"))
+        assertTrue(matchesSearch("L'Attaque des Titans", "L’ATTAQUE"))
+        assertTrue(matchesSearch("Spy×Family", "spy"))
+        assertTrue(matchesSearch("Naruto", ""))
+        assertTrue(matchesSearch("ワンピース", "ワン"))
+        assertFalse(matchesSearch("ワンピース", "naruto"))
+        assertFalse(matchesSearch("Naruto", "one piece"))
+    }
+
+    @Test
+    fun `tri alphabétique français`() {
+        val titles = listOf("Zelda", "Été indien", "ébauche", "Akira", "L’Attaque des Titans", "Eden", "Fruits Basket", "l'arbre")
+        val sorted = titles.mapIndexed { i, t -> Series(i.toLong(), t) }.sortedWith(seriesOrder()).map { it.title }
+        assertEquals(
+            listOf("Akira", "ébauche", "Eden", "Été indien", "Fruits Basket", "l'arbre", "L’Attaque des Titans", "Zelda"),
+            sorted,
+        )
+    }
+
+    @Test
+    fun `tri stable entre titres qui ne diffèrent que par les accents`() {
+        val a = Series(1, "Dede")
+        val b = Series(2, "Dédé")
+        assertEquals(listOf(a, b), listOf(b, a).sortedWith(seriesOrder()))
+        assertEquals(listOf(a, b), listOf(a, b).sortedWith(seriesOrder()))
+    }
 }
