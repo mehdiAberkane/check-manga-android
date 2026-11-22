@@ -44,6 +44,7 @@ Les seuls déplacements permis à l'agent : « À faire » → « En cours » �
 ./gradlew lintDebug testDebugUnitTest assembleDebug   # avant de pousser
 ```
 
+- Versions des plugins et bibliothèques dans `gradle/libs.versions.toml`. Les PR Dependabot `gradle` échouent en CI tant que `verification-metadata.xml` n'est pas régénéré : le faire sur leur branche.
 - Dépendances vérifiées par `gradle/verification-metadata.xml` : toute mise à jour de dépendance ou de plugin régénère ce fichier, avec les variantes Linux et macOS d'`aapt2` (procédure dans le README).
 - Tests unitaires dans `app/src/test` (JUnit 4). Toute logique pure modifiée ou ajoutée vient avec ses tests dans la même pull request.
 - CI : `.github/workflows/build-apk.yml` sur chaque pull request et sur `main`. Ne fusionner une pull request que si la CI est verte.

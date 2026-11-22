@@ -31,7 +31,9 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 
 ## Stack
 
-Kotlin, Jetpack Compose (Material 3), minSdk 26 (Android 8.0), targetSdk 35.
+Kotlin, Jetpack Compose (Material 3), minSdk 26 (Android 8.0), targetSdk 36 (Android 16), compilé avec
+les API d'Android 17 (compileSdk 37.2, exigé par les bibliothèques AndroidX). Gradle 9, AGP 9 (qui
+compile Kotlin lui-même). Toutes les versions sont dans `gradle/libs.versions.toml`.
 
 ## Compiler
 
@@ -76,7 +78,7 @@ en lieu sûr : sans eux, impossible de publier une mise à jour installable par-
 Après une mise à jour de dépendance ou de plugin, régénérer ce fichier :
 
 ```bash
-./gradlew --write-verification-metadata sha256 lintDebug lintRelease testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease
+./gradlew --write-verification-metadata sha256 lintDebug testDebugUnitTest assembleDebug assembleRelease
 ```
 
 `aapt2` est un artefact propre à chaque système : Gradle n'enregistre que celui de la machine. Ajouter à
@@ -84,9 +86,16 @@ la main les variantes `-linux.jar` (utilisée par la CI) et `-osx.jar`, avec leu
 fichier téléchargé contre le `.sha1` publié sur `https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/<version>/`.
 Relire le diff du fichier : chaque nouvelle entrée doit correspondre à une dépendance attendue.
 
-La CI peut aussi résoudre des fichiers que la compilation locale n'a pas téléchargés (ex. le `.module`
-de `junit-bom`) : le log indique alors « Dependency verification failed » avec le nom des fichiers, à
-ajouter de la même façon après vérification contre le `.sha1` du dépôt Maven.
+La CI part d'un cache Gradle vide et résout des fichiers de métadonnées (`.pom`, `.module` de BOM)
+que la compilation locale ne télécharge pas. Pour les enregistrer d'un coup, régénérer avec un cache
+vide (PowerShell) :
+
+```powershell
+$env:GRADLE_USER_HOME = "$env:TEMP\gradle-home-vierge"; .\gradlew.bat --no-daemon --write-verification-metadata sha256 lintDebug testDebugUnitTest assembleDebug assembleRelease; Remove-Item Env:GRADLE_USER_HOME
+```
+
+S'il en manque encore, le log de la CI indique « Dependency verification failed » avec le nom des
+fichiers, à ajouter après vérification contre le `.sha1` du dépôt Maven.
 
 ## Compilation automatique (GitHub Actions)
 
