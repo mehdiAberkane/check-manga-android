@@ -68,6 +68,21 @@
     <string name="cover_search_partial">Google Books ne répond pas : voici les couvertures déjà connues.</string>
     <string name="cover_auto">Couverture automatique</string>
     <string name="cover_of">Couverture de %1$s</string>
+    <string name="menu_auto_backup">Sauvegarde automatique</string>
+    <string name="backup_menu_off">Désactivée</string>
+    <string name="backup_menu_last">Dernière : %1$s</string>
+    <string name="backup_title">Sauvegarde automatique</string>
+    <string name="backup_choose_folder">Choisir un dossier</string>
+    <string name="backup_change_folder">Changer de dossier</string>
+    <string name="backup_disable">Désactiver</string>
+    <string name="backup_now">Sauvegarder maintenant</string>
+    <string name="backup_started">Sauvegarde en cours…</string>
+    <string name="backup_folder">Dossier : %1$s</string>
+    <string name="backup_last">Dernière sauvegarde : %1$s</string>
+    <string name="backup_never">Pas encore de sauvegarde.</string>
+    <string name="backup_error_access">Le dossier de sauvegarde n\'est plus accessible : choisis-en un autre.</string>
+    <string name="backup_error_write">La dernière sauvegarde a échoué, elle sera retentée.</string>
+    <string name="backup_folder_refused">Ce dossier ne peut pas être utilisé pour la sauvegarde.</string>
     <string name="release_volume">Tome %1$d</string>
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>
@@ -145,5 +160,10 @@
         <item quantity="one">%d série non vérifiée : Google Books n\'a pas répondu (quota ?).</item>
         <item quantity="many">%d séries non vérifiées : Google Books n\'a pas répondu (quota ?).</item>
         <item quantity="other">%d séries non vérifiées : Google Books n\'a pas répondu (quota ?).</item>
+    </plurals>
+    <plurals name="backup_intro">
+        <item quantity="one">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, le dernier est gardé. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
+        <item quantity="many">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
+        <item quantity="other">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
     </plurals>
 </resources>

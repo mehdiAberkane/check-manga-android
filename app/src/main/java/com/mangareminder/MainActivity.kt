@@ -47,6 +47,7 @@ private fun MangaReminderApp(
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     val pendingImport by viewModel.pendingImport.collectAsStateWithLifecycle()
     val coverSearch by viewModel.coverSearch.collectAsStateWithLifecycle()
+    val backupStatus by viewModel.backupStatus.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selected = series.find { it.id == selectedId }
@@ -64,6 +65,10 @@ private fun MangaReminderApp(
             releases = releases,
             onCheckReleases = viewModel::checkReleasesNow,
             onCheckUpdate = updateViewModel::check,
+            backupStatus = backupStatus,
+            onEnableBackup = viewModel::enableBackup,
+            onDisableBackup = viewModel::disableBackup,
+            onBackupNow = viewModel::backupNow,
         )
     } else {
         BackHandler { selectedId = null }

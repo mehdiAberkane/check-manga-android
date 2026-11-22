@@ -3,6 +3,8 @@ package com.mangareminder.ui
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import com.mangareminder.backup.AutoBackup
+import com.mangareminder.backup.BackupStatus
 import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
@@ -40,6 +42,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         ReleaseStore.init(app)
+        AutoBackup.init(app)
         ReleaseScheduler.sync(app, _series.value.any { it.watched })
     }
 
@@ -100,6 +103,18 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     fun dismissCoverSearch() {
         _coverSearch.value = null
     }
+
+    val backupStatus: StateFlow<BackupStatus> = AutoBackup.status
+
+    /** @return false si le dossier choisi ne peut pas être gardé (accès refusé par Android). */
+    fun enableBackup(folder: Uri): Boolean = runCatching {
+        AutoBackup.enable(getApplication<Application>(), folder)
+    }.isSuccess
+
+    fun disableBackup() = AutoBackup.disable(getApplication<Application>())
+
+    /** Après les écritures en attente, pour sauvegarder la dernière version. */
+    fun backupNow() = afterSave { AutoBackup.backupNow(getApplication<Application>()) }
 
     fun dismissSaveError() {
         _saveFailed.value = false
@@ -206,6 +221,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         saver.execute {
             try {
                 repository.save(newList)
+                AutoBackup.scheduleAfterChange(getApplication<Application>())
             } catch (e: IOException) {
                 _saveFailed.value = true
             }

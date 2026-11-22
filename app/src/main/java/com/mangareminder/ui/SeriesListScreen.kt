@@ -63,6 +63,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import com.mangareminder.releases.autoCover
+import com.mangareminder.backup.BackupStatus
 
 @Composable
 fun SeriesListScreen(
@@ -77,7 +78,12 @@ fun SeriesListScreen(
     releases: Map<Long, SeriesReleases>,
     onCheckReleases: () -> Unit,
     onCheckUpdate: () -> Unit,
+    backupStatus: BackupStatus,
+    onEnableBackup: (Uri) -> Boolean,
+    onDisableBackup: () -> Unit,
+    onBackupNow: () -> Unit,
 ) {
+    var showBackup by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -134,6 +140,25 @@ fun SeriesListScreen(
                                 menuOpen = false
                                 // Certains gestionnaires de fichiers ne typent pas les .json : on accepte tout et on valide à la lecture.
                                 importLauncher.launch(arrayOf("*/*"))
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(stringResource(R.string.menu_auto_backup))
+                                    Text(
+                                        if (backupStatus.folder == null) stringResource(R.string.backup_menu_off)
+                                        else if (backupStatus.lastSuccess == 0L) stringResource(R.string.backup_never)
+                                        else stringResource(R.string.backup_menu_last, formatDateTime(backupStatus.lastSuccess)),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (backupStatus.lastError != null) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
+                            onClick = {
+                                menuOpen = false
+                                showBackup = true
                             },
                         )
                         DropdownMenuItem(
@@ -202,6 +227,23 @@ fun SeriesListScreen(
             },
         )
     }
+    if (showBackup) {
+        AutoBackupDialog(
+            status = backupStatus,
+            onFolderChosen = { folder ->
+                if (!onEnableBackup(folder)) {
+                    scope.launch { snackbar.showSnackbar(resources.getString(R.string.backup_folder_refused)) }
+                }
+            },
+            onBackupNow = {
+                onBackupNow()
+                scope.launch { snackbar.showSnackbar(resources.getString(R.string.backup_started)) }
+            },
+            onDisable = onDisableBackup,
+            onDismiss = { showBackup = false },
+        )
+    }
+
     pendingImport?.let { imported ->
         ImportDialog(
             importedCount = imported.size,
