@@ -1,13 +1,18 @@
 # Mises à jour proposées chaque semaine par Dependabot.
 version: 2
 updates:
-  # Actions GitHub épinglées par SHA dans les workflows.
+  # Actions GitHub épinglées par SHA dans les workflows, en une seule PR par semaine.
+  # Sa CI n'exerce que le job build : le job release (signature, publication) n'est testé
+  # qu'au push sur main qui suit la fusion, à vérifier.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: "CI"
+    groups:
+      actions:
+        patterns: ["*"]
 
   # Plugins et bibliothèques de gradle/libs.versions.toml, en une seule PR par semaine.
   # Dependabot ne met pas à jour gradle/verification-metadata.xml : la CI de ces PR échoue
