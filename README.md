@@ -12,6 +12,10 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 - Appui long sur un tome possédé : « Lu » et « Prêté à… » (nom, date). Petites icônes dans la grille,
   résumé « Lus » / « Prêtés » sur la fiche et la carte, filtre « Prêtés » dans la liste. Décocher un tome
   efface son statut. Champs facultatifs `read` et `loans` dans `series.json` (donc dans l'export).
+- Scanner un tome (menu ⋮) : le scanner de code-barres de Google (services Play, sans permission caméra
+  dans l'app) lit l'ISBN, l'app le cherche sur Google Books et répond « tu l'as » / « tu ne l'as pas »
+  (avec « Je l'ai acheté »), ou propose de créer la série. Saisie de l'ISBN au clavier si le scanner est
+  fermé ou indisponible. Le module ML Kit du scanner inclut les statistiques d'utilisation anonymes de Google.
 - En magasin : chercher « one piece 45 » (ou `t45`, `tome 45`, `#45`) répond directement en haut de la liste
   « tu l'as » ou « tu ne l'as pas », avec un bouton « Je l'ai acheté » qui coche le tome.
 - Nombre total de tomes optionnel (série en cours) : la case « + » marque le tome suivant.

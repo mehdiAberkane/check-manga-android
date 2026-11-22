@@ -34,6 +34,14 @@ import com.mangareminder.data.ListFilter
 import com.mangareminder.data.ListSort
 import com.mangareminder.data.enumOrDefault
 import com.mangareminder.data.restoreSeries
+import androidx.annotation.StringRes
+import com.mangareminder.R
+import com.mangareminder.data.ScanMatch
+import com.mangareminder.data.matchScannedBook
+import com.mangareminder.data.normalizeIsbn
+import com.mangareminder.data.parseIsbnLookup
+import com.mangareminder.releases.Http
+import java.net.URL
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = SeriesRepository(app)
@@ -140,6 +148,59 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Après les écritures en attente, pour sauvegarder la dernière version. */
     fun backupNow() = afterSave { AutoBackup.backupNow(getApplication<Application>()) }
+
+    private val _scan = MutableStateFlow<ScanState?>(null)
+    /** Tome scanné : recherche en cours, résultat, ou saisie manuelle de l'ISBN. */
+    val scan: StateFlow<ScanState?> = _scan.asStateFlow()
+
+    /** Scanner indisponible (pas de services Play…) : saisie de l'ISBN au clavier. */
+    fun scanManually() {
+        _scan.value = ScanState.Manual()
+    }
+
+    /** Code lu par le scanner ou tapé : vérifié, puis cherché sur Google Books. */
+    fun lookupIsbn(raw: String) {
+        val isbn = normalizeIsbn(raw)
+        if (isbn == null) {
+            _scan.value = ScanState.Manual(raw.take(20), R.string.scan_isbn_invalid)
+            return
+        }
+        _scan.value = ScanState.Looking(isbn)
+        viewModelScope.launch {
+            val title = withContext(Dispatchers.IO) {
+                runCatching {
+                    parseIsbnLookup(Http.get(URL("https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn")))
+                }
+            }
+            // La recherche peut avoir été fermée entre-temps.
+            if (_scan.value != ScanState.Looking(isbn)) return@launch
+            _scan.value = title.fold(
+                onSuccess = { found ->
+                    if (found == null) ScanState.Manual(isbn, R.string.scan_not_found)
+                    else ScanState.Found(isbn, matchScannedBook(_series.value, found))
+                },
+                onFailure = { ScanState.Manual(isbn, R.string.scan_lookup_failed) },
+            )
+        }
+    }
+
+    fun markScannedOwned(match: ScanMatch.InCollection) {
+        addVolumes(match.series.id, setOf(match.volume))
+        val updated = _series.value.find { it.id == match.series.id } ?: return
+        (_scan.value as? ScanState.Found)?.let { _scan.value = it.copy(match = match.copy(series = updated)) }
+    }
+
+    /** Crée la série proposée, avec le tome scanné s'il a été reconnu ; renvoie son id. */
+    fun createScannedSeries(match: ScanMatch.NewSeries): Long {
+        val id = addSeries(match.suggestedTitle, null)
+        match.volume?.let { addVolumes(id, setOf(it)) }
+        _scan.value = null
+        return id
+    }
+
+    fun dismissScan() {
+        _scan.value = null
+    }
 
     fun dismissSaveError() {
         _saveFailed.value = false
@@ -303,4 +364,11 @@ sealed interface UndoAction {
     data class Deleted(val series: Series) : UndoAction
     /** previous : la collection remplacée par l'import. */
     data class Imported(val previous: List<Series>, val count: Int) : UndoAction
+}
+
+sealed interface ScanState {
+    data class Looking(val isbn: String) : ScanState
+    data class Found(val isbn: String, val match: ScanMatch) : ScanState
+    /** Saisie au clavier, avec le code déjà lu et la raison (introuvable, réseau…) s'il y en a une. */
+    data class Manual(val isbn: String? = null, @param:StringRes val message: Int? = null) : ScanState
 }
