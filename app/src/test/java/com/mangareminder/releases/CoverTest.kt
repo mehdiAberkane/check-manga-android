@@ -66,13 +66,17 @@ class CoverTest {
               {"volumeInfo": {"title": "Naruto Tome 1", "publishedDate": "2002-03-01",
                 "imageLinks": {"thumbnail": "http://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"}}},
               {"volumeInfo": {"title": "Naruto Tome 2", "imageLinks": {"thumbnail": "https://evil.example/x.jpg"}}},
-              {"volumeInfo": {"title": "Naruto Tome 3"}}
+              {"volumeInfo": {"title": "Naruto Tome 3"}},
+              {"volumeInfo": {"title": "Naruto", "seriesInfo": {"bookDisplayNumber": "4"}}},
+              {"volumeInfo": {"title": "Boruto - Naruto Next Generations tome 9"}}
             ]}
         """.trimIndent()
         val releases = GoogleBooksSource.parse(json, "Naruto").associateBy { it.volume }
         assertEquals(gb, releases.getValue(1).cover)
         assertNull(releases.getValue(2).cover)
         assertNull(releases.getValue(3).cover)
+        // Numéro donné par seriesInfo ; série dérivée écartée.
+        assertEquals(setOf(1, 2, 3, 4), releases.keys)
     }
 
     @Test

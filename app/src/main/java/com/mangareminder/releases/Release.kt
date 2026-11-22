@@ -52,32 +52,42 @@ fun normalizeTitle(text: String): String =
         .replace(Regex("[^a-z0-9]+"), " ")
         .trim()
 
-/** Produits dérivés qui partagent le titre de la série mais ne sont pas des tomes. */
-private val EXCLUDED_WORDS = setOf(
-    "coffret", "artbook", "fanbook", "databook", "guidebook", "guide", "roman", "novel",
-    "coloriage", "calendrier", "agenda", "anime", "film", "making",
+/**
+ * Mots acceptés entre le titre de la série et le numéro du tome : ils ne changent ni la série ni
+ * la numérotation (« One Piece - Édition originale - Tome 105 »). Tout autre mot (« Super »,
+ * « Next Generations », « Perfect », « double », « coffret »…) désigne une autre série ou une
+ * autre édition, dont les numéros ne correspondent pas : le livre est écarté.
+ */
+private val NEUTRAL_WORDS = setOf(
+    "edition", "editions", "originale", "original", "nouvelle", "francaise", "fr", "vf", "manga",
+    "tome", "tomes", "volume", "volumes", "vol", "t", "n", "no", "numero",
 )
 
-private val VOLUME_PATTERN = Regex("\\b(?:tome|tomes|volume|vol|t|n)\\s*(\\d{1,3})\\b")
-private val TRAILING_NUMBER = Regex("^(\\d{1,3})$")
+private val NUMBER = Regex("^(\\d{1,3})$")
+// « t12 », « vol3 », « n4 » : préfixe collé au numéro après normalisation.
+private val PREFIXED_NUMBER = Regex("^(?:t|tome|vol|volume|n|no)(\\d{1,3})$")
 
 /**
  * Numéro de tome d'un livre de la série, ou null si le livre n'appartient pas à la série
  * ou n'a pas de numéro reconnaissable.
+ * - le titre de la série doit être au début du titre du livre ;
+ * - entre les deux, seulement des mots neutres ([NEUTRAL_WORDS]) ;
+ * - après le numéro, tout est accepté (sous-titre du tome).
+ * @param displayNumber numéro donné à part par la source (Google Books `seriesInfo`), utilisé si
+ *   le titre n'en contient pas.
  */
-fun extractVolume(bookTitle: String, seriesTitle: String): Int? {
+fun extractVolume(bookTitle: String, seriesTitle: String, displayNumber: String? = null): Int? {
     val book = normalizeTitle(bookTitle)
     val series = normalizeTitle(seriesTitle)
-    if (series.isEmpty()) return null
-    val index = " $book ".indexOf(" $series ")
-    if (index < 0) return null
-    val rest = book.substring(minOf(book.length, index + series.length)).trim()
-    if (rest.split(' ').any { it in EXCLUDED_WORDS }) return null
-
-    val number = VOLUME_PATTERN.find(rest)?.groupValues?.get(1)
-        ?: TRAILING_NUMBER.find(rest)?.groupValues?.get(1)
-        ?: return null
-    return number.toInt().takeIf { it in 1..999 }
+    if (series.isEmpty() || !(book == series || book.startsWith("$series "))) return null
+    val words = book.removePrefix(series).trim().split(' ').filter { it.isNotEmpty() }
+    for (word in words) {
+        (NUMBER.find(word) ?: PREFIXED_NUMBER.find(word))?.let { match ->
+            return match.groupValues[1].toInt().takeIf { it in 1..999 }
+        }
+        if (word !in NEUTRAL_WORDS) return null
+    }
+    return displayNumber?.trim()?.toIntOrNull()?.takeIf { it in 1..999 }
 }
 
 /** "2026-12-05" -> "05/12/2026", "2026-12" -> "12/2026", "2026" -> "2026". */

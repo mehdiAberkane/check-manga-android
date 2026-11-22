@@ -39,7 +39,9 @@ object GoogleBooksSource : ReleaseSource {
             val title = listOf(info.optString("title"), info.optString("subtitle"))
                 .filter { it.isNotBlank() }
                 .joinToString(" - ")
-            val volume = extractVolume(title, seriesTitle) ?: return@mapNotNull null
+            // seriesInfo.bookDisplayNumber : numéro donné à part, quand Google Books le connaît.
+            val displayNumber = info.optJSONObject("seriesInfo")?.optString("bookDisplayNumber")
+            val volume = extractVolume(title, seriesTitle, displayNumber) ?: return@mapNotNull null
             Release(
                 volume = volume,
                 title = title,

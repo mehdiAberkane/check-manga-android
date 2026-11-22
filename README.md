@@ -35,6 +35,11 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   que le dernier possédé (ou que le total indiqué) apparaît. « Vérifier les sorties » (menu ⋮) force
   une recherche.
 
+  Un livre n'est compté comme un tome de la série que si son titre commence par le titre de la série, suivi
+  seulement de mots neutres (« édition originale », « tome »…) avant le numéro : les séries dérivées
+  (« Dragon Ball Super », « Boruto - Naruto Next Generations ») et les éditions à numérotation différente
+  (perfect, double…) sont écartées. Nommer la série comme sur la couverture.
+
   L'API Google Books est appelée sans clé : son quota est partagé, une vérification peut échouer
   et sera retentée plus tard.
 - Couvertures : la fiche d'une série propose « Choisir la couverture » parmi celles trouvées sur Google
