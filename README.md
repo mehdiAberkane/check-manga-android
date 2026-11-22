@@ -5,6 +5,8 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 ## Fonctionnalités
 
 - Liste des séries avec recherche, nombre de tomes possédés et tomes manquants.
+- Filtres de la liste (toutes, incomplètes, complètes, surveillées, nouveautés, prêtées) et tri (titre, ajout
+  récent, tomes manquants), mémorisés entre deux ouvertures.
 - Fiche d'une série : grille des tomes, un appui coche ou décoche un tome.
 - Ajout rapide de plusieurs tomes : `1-12, 15, 17`.
 - Appui long sur un tome possédé : « Lu » et « Prêté à… » (nom, date). Petites icônes dans la grille,
