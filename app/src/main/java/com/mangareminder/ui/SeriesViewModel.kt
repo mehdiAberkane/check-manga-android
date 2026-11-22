@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
+import com.mangareminder.data.seriesOrder
 import com.mangareminder.releases.ReleaseScheduler
 import com.mangareminder.releases.ReleaseStore
 import com.mangareminder.releases.SeriesReleases
@@ -144,7 +145,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun sorted(list: List<Series>) = list.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+    private fun sorted(list: List<Series>) = list.sortedWith(seriesOrder())
 
     override fun onCleared() {
         saver.shutdown()

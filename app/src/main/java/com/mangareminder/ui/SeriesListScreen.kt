@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mangareminder.data.Series
 import com.mangareminder.data.formatVolumes
+import com.mangareminder.data.matchesSearch
 import com.mangareminder.releases.Release
 import com.mangareminder.releases.SeriesReleases
 import kotlinx.coroutines.launch
@@ -74,7 +75,7 @@ fun SeriesListScreen(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val filtered = remember(series, query) {
-        series.filter { it.title.contains(query.trim(), ignoreCase = true) }
+        series.filter { matchesSearch(it.title, query) }
     }
 
     val exportLauncher = rememberLauncherForActivityResult(

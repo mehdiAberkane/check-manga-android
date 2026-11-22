@@ -1,5 +1,9 @@
 package com.mangareminder.data
 
+import java.text.Collator
+import java.text.Normalizer
+import java.util.Locale
+
 data class Series(
     val id: Long,
     val title: String,
@@ -70,3 +74,36 @@ fun parseVolumes(input: String): Set<Int>? {
 }
 
 const val MAX_VOLUME = 999
+
+/**
+ * Clé de recherche et de tri d'un titre : minuscules, sans accents, ponctuation (dont l'apostrophe
+ * typographique ’) remplacée par une espace. Les lettres de tous les alphabets sont gardées.
+ * "L’Attaque des Titans" -> "l attaque des titans", "Dédé" -> "dede".
+ */
+fun searchKey(text: String): String =
+    Normalizer.normalize(
+        Normalizer.normalize(text, Normalizer.Form.NFD).replace(DIACRITICS, ""),
+        Normalizer.Form.NFC,
+    )
+        .lowercase(Locale.ROOT)
+        .replace(NOT_LETTER_OR_DIGIT, " ")
+        .trim()
+
+/** Vrai si le titre contient la recherche, sans tenir compte des accents, de la casse ni de la ponctuation. */
+fun matchesSearch(title: String, query: String): Boolean = searchKey(title).contains(searchKey(query))
+
+/**
+ * Ordre alphabétique français : « Été » entre « E » et « F », pas après « Z ».
+ * Nouveau comparateur à chaque appel : un Collator ne doit pas être partagé entre threads.
+ */
+fun seriesOrder(): Comparator<Series> {
+    val collator = Collator.getInstance(Locale.FRENCH)
+    return compareBy<Series, String>(collator) { searchKey(it.title) }
+        .thenBy(collator) { it.title }
+        .thenBy { it.id }
+}
+
+// Accents latins seulement (é, è, ç…) : les marques des autres écritures (ex. le maru de ピ)
+// font partie de la lettre et sont recomposées par NFC.
+private val DIACRITICS = Regex("[\\u0300-\\u036f]+")
+private val NOT_LETTER_OR_DIGIT = Regex("[^\\p{L}\\p{N}]+")
