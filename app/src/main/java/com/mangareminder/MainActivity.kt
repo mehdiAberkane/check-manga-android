@@ -32,15 +32,23 @@ class MainActivity : ComponentActivity() {
     /** Demande d'ouverture de la liste « À acheter » (widget), consommée par l'écran. */
     private val openShopping = mutableStateOf(false)
 
+    /** Série à ouvrir (notification de sortie), consommée par l'écran ; id inconnu : rien. */
+    private val openSeriesId = mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) openShopping.value = intent.getBooleanExtra(EXTRA_SHOPPING, false)
+        if (savedInstanceState == null) {
+            openShopping.value = intent.getBooleanExtra(EXTRA_SHOPPING, false)
+            openSeriesId.value = seriesIdOf(intent)
+        }
         setContent {
             MangaReminderTheme {
                 MangaReminderApp(
                     openShopping = openShopping.value,
                     onShoppingOpened = { openShopping.value = false },
+                    openSeriesId = openSeriesId.value,
+                    onSeriesOpened = { openSeriesId.value = null },
                 )
             }
         }
@@ -49,10 +57,16 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_SHOPPING, false)) openShopping.value = true
+        seriesIdOf(intent)?.let { openSeriesId.value = it }
     }
+
+    /** L'activité est exportée : l'extra peut venir de n'importe où, il est seulement lu comme un id. */
+    private fun seriesIdOf(intent: Intent): Long? =
+        intent.getLongExtra(EXTRA_SERIES_ID, Long.MIN_VALUE).takeIf { it != Long.MIN_VALUE }
 
     companion object {
         const val EXTRA_SHOPPING = "com.mangareminder.SHOPPING"
+        const val EXTRA_SERIES_ID = "com.mangareminder.SERIES_ID"
     }
 }
 
@@ -60,6 +74,8 @@ class MainActivity : ComponentActivity() {
 private fun MangaReminderApp(
     openShopping: Boolean,
     onShoppingOpened: () -> Unit,
+    openSeriesId: Long?,
+    onSeriesOpened: () -> Unit,
     viewModel: SeriesViewModel = viewModel(),
     updateViewModel: UpdateViewModel = viewModel(),
 ) {
@@ -82,6 +98,17 @@ private fun MangaReminderApp(
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showShopping by rememberSaveable { mutableStateOf(false) }
     val selected = series.find { it.id == selectedId }
+
+    LaunchedEffect(openSeriesId) {
+        if (openSeriesId != null) {
+            // Id inconnu (série supprimée, intention forgée) : on reste sur la liste.
+            if (series.any { it.id == openSeriesId }) {
+                showShopping = false
+                selectedId = openSeriesId
+            }
+            onSeriesOpened()
+        }
+    }
 
     LaunchedEffect(openShopping) {
         if (openShopping) {

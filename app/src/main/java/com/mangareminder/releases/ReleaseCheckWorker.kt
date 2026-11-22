@@ -31,6 +31,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONException
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 
 /** Cherche les nouveaux tomes des séries surveillées et notifie les nouveautés. */
 class ReleaseCheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -127,10 +129,17 @@ object ReleaseScheduler {
 object ReleaseNotifier {
     private const val CHANNEL = "releases"
 
+    /** Permission accordée (Android 13+) et notifications de l'app non désactivées dans les réglages. */
     fun canNotify(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+        (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) && NotificationManagerCompat.from(context).areNotificationsEnabled()
+
+    /** Réglages des notifications de l'app (Android 8+). */
+    fun settingsIntent(context: Context): Intent =
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 
     @SuppressLint("MissingPermission") // Vérifiée par canNotify().
     fun notify(context: Context, news: List<Pair<Series, Release>>) {
@@ -139,18 +148,22 @@ object ReleaseNotifier {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL, context.getString(R.string.channel_releases), NotificationManager.IMPORTANCE_DEFAULT)
         )
-        val openApp = PendingIntent.getActivity(
-            context,
-            0,
-            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
         news.forEach { (series, release) ->
+            // Un appui ouvre la fiche de la série : un code de requête par série, sinon Android
+            // réutiliserait la même intention (et le même extra) pour toutes les notifications.
+            val openSeries = PendingIntent.getActivity(
+                context,
+                series.id.hashCode(),
+                Intent(context, MainActivity::class.java)
+                    .putExtra(MainActivity.EXTRA_SERIES_ID, series.id)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
             val notification = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(context.getString(R.string.notif_new_volume, series.title))
                 .setContentText(release.describe().text(context))
-                .setContentIntent(openApp)
+                .setContentIntent(openSeries)
                 .setAutoCancel(true)
                 .build()
             manager.notify(series.id.hashCode(), notification)

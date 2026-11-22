@@ -79,6 +79,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Person
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.compose.runtime.remember
 
 @Composable
 fun SeriesDetailScreen(
@@ -106,9 +108,15 @@ fun SeriesDetailScreen(
     val context = LocalContext.current
     // Android 13+ : la permission de notifier est demandée quand on active la surveillance.
     // Un refus n'empêche pas la surveillance : les sorties restent visibles dans l'app.
+    // Vérifiée à chaque retour sur l'écran (réglages modifiés) et après la demande de permission.
+    var canNotify by remember { mutableStateOf(ReleaseNotifier.canNotify(context)) }
+    LifecycleResumeEffect(Unit) {
+        canNotify = ReleaseNotifier.canNotify(context)
+        onPauseOrDispose { }
+    }
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { }
+    ) { canNotify = ReleaseNotifier.canNotify(context) }
     var showEdit by rememberSaveable { mutableStateOf(false) }
     var showDelete by rememberSaveable { mutableStateOf(false) }
     var showAddVolumes by rememberSaveable { mutableStateOf(false) }
@@ -172,7 +180,11 @@ fun SeriesDetailScreen(
             }
             if (series.watched) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    ReleasesCard(series, releases, checking, checkError, onCheckNow)
+                    ReleasesCard(
+                        series, releases, checking, checkError, onCheckNow,
+                        notificationsBlocked = !canNotify,
+                        onOpenNotificationSettings = { context.startActivity(ReleaseNotifier.settingsIntent(context)) },
+                    )
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -376,11 +388,23 @@ private fun ReleasesCard(
     checking: Boolean,
     checkError: String?,
     onCheckNow: () -> Unit,
+    notificationsBlocked: Boolean = false,
+    onOpenNotificationSettings: () -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.watched_releases), style = MaterialTheme.typography.titleMedium)
+            if (notificationsBlocked) {
+                Text(
+                    stringResource(R.string.notifications_blocked),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                TextButton(onClick = onOpenNotificationSettings, contentPadding = PaddingValues(0.dp)) {
+                    Text(stringResource(R.string.notifications_settings))
+                }
+            }
             if (checking) LinearProgressIndicator(Modifier.fillMaxWidth())
             when {
                 releases == null -> Text(
