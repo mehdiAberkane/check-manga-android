@@ -6,13 +6,17 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * Stocke la collection dans un petit fichier JSON privé à l'application.
  * Il est inclus dans la sauvegarde automatique Android (allowBackup).
  */
-class SeriesRepository(context: Context) {
-    private val file = File(context.filesDir, "series.json")
+class SeriesRepository(dir: File) {
+    constructor(context: Context) : this(context.filesDir)
+
+    private val file = File(dir, "series.json")
 
     fun load(): List<Series> {
         if (!file.exists()) return emptyList()
@@ -29,7 +33,9 @@ class SeriesRepository(context: Context) {
     fun save(series: List<Series>) {
         val tmp = File(file.parentFile, "series.json.tmp")
         tmp.writeText(toJson(series))
-        if (!tmp.renameTo(file)) throw IOException("Impossible de remplacer ${file.name}")
+        // Remplacement atomique : series.json est soit l'ancienne, soit la nouvelle version.
+        // (File.renameTo ne remplace pas un fichier existant sur toutes les plateformes.)
+        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
     }
 
     companion object {
