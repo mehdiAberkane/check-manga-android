@@ -39,4 +39,11 @@ class BackupFilesTest {
             backupsToDelete(others + "manga-reminder-2026-11-02.json", keep = 0),
         )
     }
+
+    @Test
+    fun `sauvegarde la plus récente`() {
+        val names = listOf("manga-reminder-2026-11-20.json", "notes.txt", "manga-reminder-2026-11-22.json", "manga-reminder-2026-11-21.json")
+        assertEquals("manga-reminder-2026-11-22.json", latestBackupName(names))
+        assertEquals(null, latestBackupName(listOf("notes.txt")))
+    }
 }

@@ -20,7 +20,7 @@ Les seuls déplacements permis à l'agent : « À faire » → « En cours » �
 
 ## Principes de l'application
 
-- **La collection de l'utilisateur ne doit jamais être perdue.** `series.json` est écrit en tout-ou-rien (fichier temporaire puis renommage) ; un fichier illisible est mis de côté, jamais écrasé.
+- **La collection de l'utilisateur ne doit jamais être perdue.** `series.json` est écrit en tout-ou-rien (fichier temporaire puis renommage). Un fichier illisible (JSON invalide ou erreur de lecture) est copié de côté avec la date (`series.json.corrupt-AAAAMMJJ-HHMM`, 5 gardées) et l'écran « Collection illisible » bloque toute écriture tant que l'utilisateur n'a pas choisi (restaurer, importer, exporter le fichier abîmé, repartir de zéro). La tâche de fond ne touche à rien dans ce cas.
 - **Format de `series.json`** : c'est aussi le format de l'export / import. Un nouveau champ est facultatif à la lecture (valeur par défaut s'il manque), pour relire les anciennes sauvegardes.
 - **Données importées = données non fiables** : toute valeur lue (`SeriesRepository.fromJson`, cache `releases.json`, réponses réseau) est bornée avant usage (tomes 1..999, longueur des titres, id uniques, taille des fichiers).
 - **Réseau** : HTTPS uniquement, taille de réponse limitée, aucun jeton ni secret dans l'application (le dépôt et l'APK sont publics).

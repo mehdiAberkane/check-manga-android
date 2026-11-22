@@ -7,6 +7,8 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -19,15 +21,39 @@ class SeriesRepository(dir: File) {
 
     private val file = File(dir, "series.json")
 
-    fun load(): List<Series> {
-        if (!file.exists()) return emptyList()
+    /**
+     * Lit la collection en distinguant « pas encore de fichier » et « fichier illisible ».
+     * @param setAside met une copie datée d'un fichier illisible de côté (l'écran le fait ; la
+     *   tâche de fond, qui ne fait que lire, non).
+     */
+    fun load(setAside: Boolean = true): LoadResult {
+        if (!file.exists()) return LoadResult.Missing
         return try {
-            fromJson(file.readText())
+            LoadResult.Ok(fromJson(file.readText()))
         } catch (e: JSONException) {
-            // On met le fichier illisible de côté plutôt que de l'écraser à la prochaine sauvegarde.
-            file.copyTo(File(file.parentFile, "series.json.corrupt"), overwrite = true)
-            emptyList()
+            if (setAside) setAsideCorrupt()
+            LoadResult.Unreadable
+        } catch (e: IOException) {
+            if (setAside) setAsideCorrupt()
+            LoadResult.Unreadable
         }
+    }
+
+    /** Contenu brut du fichier abîmé, pour l'exporter ; null s'il ne peut pas être lu du tout. */
+    fun readDamaged(): ByteArray? = runCatching { file.readBytes() }.getOrNull()
+
+    /**
+     * Copie datée du fichier illisible (series.json.corrupt-AAAAMMJJ-HHMM), les plus récentes
+     * gardées. Le fichier lui-même n'est pas touché : rien n'est écrit tant que l'utilisateur n'a
+     * pas choisi quoi faire. Hors sauvegarde Android (seul series.json y est inclus).
+     */
+    private fun setAsideCorrupt() {
+        runCatching {
+            val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))
+            file.copyTo(File(file.parentFile, "$CORRUPT_PREFIX$stamp"), overwrite = true)
+        }
+        val names = file.parentFile?.list()?.toList().orEmpty()
+        corruptCopiesToDelete(names).forEach { File(file.parentFile, it).delete() }
     }
 
     /** Contenu brut de series.json, ou null s'il n'existe pas. Ne met rien de côté (sauvegarde automatique). */
@@ -128,9 +154,27 @@ class SeriesRepository(dir: File) {
             return result
         }
 
+        const val CORRUPT_PREFIX = "series.json.corrupt-"
+        const val KEPT_CORRUPT_COPIES = 5
+
+        /** Copies de côté à supprimer pour n'en garder que les plus récentes (le nom est trié par date). */
+        fun corruptCopiesToDelete(names: Collection<String>, keep: Int = KEPT_CORRUPT_COPIES): List<String> =
+            names.filter { it.matches(CORRUPT_NAME) }.sortedDescending().drop(keep)
+
+        private val CORRUPT_NAME = Regex("series\\.json\\.corrupt-\\d{8}-\\d{4}")
+
         const val MAX_SERIES = 5_000
         const val MAX_TITLE_LENGTH = 200
         /** Une vraie sauvegarde fait quelques dizaines de Ko. */
         const val MAX_BACKUP_BYTES = 1_000_000
     }
+}
+
+/** Résultat de la lecture de series.json. */
+sealed interface LoadResult {
+    /** Pas encore de fichier : première ouverture, collection vide. */
+    data object Missing : LoadResult
+    data class Ok(val series: List<Series>) : LoadResult
+    /** JSON invalide ou lecture impossible : ne rien écrire tant que l'utilisateur n'a pas choisi. */
+    data object Unreadable : LoadResult
 }
