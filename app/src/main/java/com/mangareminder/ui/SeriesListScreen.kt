@@ -74,6 +74,7 @@ import com.mangareminder.data.applyListOptions
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
+import com.mangareminder.data.UndoAction
 
 @Composable
 fun SeriesListScreen(

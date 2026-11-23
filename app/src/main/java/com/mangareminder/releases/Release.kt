@@ -1,6 +1,7 @@
 package com.mangareminder.releases
 
 import com.mangareminder.R
+import com.mangareminder.data.Series
 import com.mangareminder.UiMessage
 import java.text.Normalizer
 import java.time.LocalDate
@@ -26,6 +27,32 @@ data class Release(
         return if (isUpcoming(today)) UiMessage(R.string.release_upcoming, volume, formatted)
         else UiMessage(R.string.release_published, volume, formatted)
     }
+}
+
+/**
+ * Résultat d'une vérification pour une série : ce qu'on garde en cache, et la sortie à
+ * notifier s'il y en a une (sans dépendance Android, testé en unitaire).
+ */
+data class CheckOutcome(val stored: SeriesReleases, val notify: Release?)
+
+/**
+ * Décide quoi garder et quoi notifier après une recherche.
+ * - On notifie le plus haut tome trouvé s'il dépasse le dernier tome connu de l'utilisateur et
+ *   le dernier tome déjà notifié (jamais deux fois le même).
+ * - Une recherche vide (quota, titre mal reconnu) n'efface pas les résultats connus.
+ */
+fun checkOutcome(series: Series, found: List<Release>, previous: SeriesReleases?, now: Long): CheckOutcome {
+    val notifiedMax = previous?.notifiedMax ?: 0
+    val latest = found.maxByOrNull { it.volume }
+    val notify = latest?.takeIf { it.volume > series.lastKnownVolume && it.volume > notifiedMax }
+    return CheckOutcome(
+        stored = SeriesReleases(
+            checkedAt = now,
+            releases = found.ifEmpty { previous?.releases ?: emptyList() },
+            notifiedMax = notify?.volume ?: notifiedMax,
+        ),
+        notify = notify,
+    )
 }
 
 /** Résultat de la dernière vérification d'une série. */
