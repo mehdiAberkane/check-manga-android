@@ -42,6 +42,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Couverture des tests unitaires (JaCoCo intégré à AGP) : createDebugUnitTestCoverageReport.
+            enableUnitTestCoverage = true
+        }
         release {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false

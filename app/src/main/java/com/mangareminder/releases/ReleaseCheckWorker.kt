@@ -60,22 +60,9 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
                     failures++
                     continue
                 }
-                val previous = ReleaseStore.get(series.id)
-                var notifiedMax = previous?.notifiedMax ?: 0
-                val latest = found.maxByOrNull { it.volume }
-                if (latest != null && latest.volume > series.lastKnownVolume && latest.volume > notifiedMax) {
-                    news += series to latest
-                    notifiedMax = latest.volume
-                }
-                ReleaseStore.put(
-                    series.id,
-                    SeriesReleases(
-                        checkedAt = System.currentTimeMillis(),
-                        // Une recherche vide (quota, titre mal reconnu) n'efface pas les résultats connus.
-                        releases = found.ifEmpty { previous?.releases ?: emptyList() },
-                        notifiedMax = notifiedMax,
-                    ),
-                )
+                val outcome = checkOutcome(series, found, ReleaseStore.get(series.id), System.currentTimeMillis())
+                outcome.notify?.let { news += series to it }
+                ReleaseStore.put(series.id, outcome.stored)
             }
         } finally {
             ReleaseStore.setChecking(false)

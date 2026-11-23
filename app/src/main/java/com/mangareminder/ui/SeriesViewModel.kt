@@ -5,11 +5,9 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import com.mangareminder.backup.AutoBackup
 import com.mangareminder.backup.BackupStatus
-import com.mangareminder.data.MAX_VOLUME
 import com.mangareminder.widget.MangaWidgetUpdater
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
-import com.mangareminder.data.seriesOrder
 import androidx.lifecycle.viewModelScope
 import com.mangareminder.releases.GoogleBooksSource
 import com.mangareminder.releases.Release
@@ -33,7 +31,6 @@ import androidx.core.content.edit
 import com.mangareminder.data.ListFilter
 import com.mangareminder.data.ListSort
 import com.mangareminder.data.enumOrDefault
-import com.mangareminder.data.restoreSeries
 import androidx.annotation.StringRes
 import com.mangareminder.R
 import com.mangareminder.data.ScanMatch
@@ -43,33 +40,34 @@ import com.mangareminder.data.parseIsbnLookup
 import com.mangareminder.releases.GOOGLE_BOOKS_HOSTS
 import com.mangareminder.releases.Http
 import java.net.URL
-import com.mangareminder.data.LoadResult
+import com.mangareminder.data.UndoAction
+import com.mangareminder.data.CollectionStore
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
-    private val repository = SeriesRepository(app)
-
-    // Un seul thread d'écriture : les sauvegardes s'appliquent dans l'ordre des modifications.
+    // Un seul fil d'écriture : les enregistrements s'appliquent dans l'ordre des modifications.
     private val saver = Executors.newSingleThreadExecutor()
 
-    private val initialLoad = repository.load()
-    private val _series = MutableStateFlow(sorted((initialLoad as? LoadResult.Ok)?.series.orEmpty()))
+    /** Collection et enregistrement (logique testée en unitaire) ; ici, seulement les effets Android. */
+    private val store = CollectionStore(
+        SeriesRepository(app),
+        saver,
+        afterSaved = {
+            AutoBackup.scheduleAfterChange(app)
+            MangaWidgetUpdater.update(app)
+        },
+    )
 
-    private val _unreadable = MutableStateFlow(initialLoad is LoadResult.Unreadable)
-    /**
-     * series.json existe mais n'a pas pu être lu. Tant que l'utilisateur n'a pas choisi (restaurer,
-     * importer, repartir de zéro), aucune modification n'est enregistrée : le fichier reste intact.
-     */
-    val collectionUnreadable: StateFlow<Boolean> = _unreadable.asStateFlow()
-    val series: StateFlow<List<Series>> = _series.asStateFlow()
-
-    private val _saveFailed = MutableStateFlow(false)
-    /** Passe à true si une écriture échoue : les dernières modifications risquent d'être perdues. */
-    val saveFailed: StateFlow<Boolean> = _saveFailed.asStateFlow()
+    val series: StateFlow<List<Series>> = store.series
+    /** series.json illisible : rien n'est enregistré tant que l'utilisateur n'a pas choisi. */
+    val collectionUnreadable: StateFlow<Boolean> = store.unreadable
+    val saveFailed: StateFlow<Boolean> = store.saveFailed
+    val pendingImport: StateFlow<List<Series>?> = store.pendingImport
+    val undo: StateFlow<UndoAction?> = store.undo
 
     init {
         ReleaseStore.init(app)
         AutoBackup.init(app)
-        ReleaseScheduler.sync(app, _series.value.any { it.watched })
+        ReleaseScheduler.sync(app, store.anyWatched)
     }
 
     /** Dernières sorties trouvées, par id de série. */
@@ -79,21 +77,15 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Active ou coupe la surveillance ; une activation lance une vérification immédiate. */
     fun toggleWatch(id: Long) {
-        updateSeries(id) { it.copy(watched = !it.watched) }
-        val nowWatched = _series.value.find { it.id == id }?.watched == true
-        afterSave {
-            ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched })
+        val nowWatched = store.toggleWatch(id)
+        store.afterSave {
+            ReleaseScheduler.sync(getApplication<Application>(), store.anyWatched)
             if (nowWatched) ReleaseScheduler.checkNow(getApplication<Application>())
         }
     }
 
     fun checkReleasesNow() {
-        afterSave { ReleaseScheduler.checkNow(getApplication<Application>()) }
-    }
-
-    /** La tâche de fond relit series.json : on attend que les écritures en cours soient faites. */
-    private fun afterSave(action: () -> Unit) {
-        saver.execute(action)
+        store.afterSave { ReleaseScheduler.checkNow(getApplication<Application>()) }
     }
 
     private val _coverSearch = MutableStateFlow<CoverSearch?>(null)
@@ -122,7 +114,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
 
     /** null : revenir à la couverture automatique. */
     fun chooseCover(id: Long, url: String?) {
-        updateSeries(id) { it.copy(cover = url) }
+        store.setCover(id, url)
         _coverSearch.value = null
     }
 
@@ -157,7 +149,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     fun disableBackup() = AutoBackup.disable(getApplication<Application>())
 
     /** Après les écritures en attente, pour sauvegarder la dernière version. */
-    fun backupNow() = afterSave { AutoBackup.backupNow(getApplication<Application>()) }
+    fun backupNow() = store.afterSave { AutoBackup.backupNow(getApplication<Application>()) }
 
     private val _scan = MutableStateFlow<ScanState?>(null)
     /** Tome scanné : recherche en cours, résultat, ou saisie manuelle de l'ISBN. */
@@ -187,7 +179,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
             _scan.value = title.fold(
                 onSuccess = { found ->
                     if (found == null) ScanState.Manual(isbn, R.string.scan_not_found)
-                    else ScanState.Found(isbn, matchScannedBook(_series.value, found))
+                    else ScanState.Found(isbn, matchScannedBook(series.value, found))
                 },
                 onFailure = { ScanState.Manual(isbn, R.string.scan_lookup_failed) },
             )
@@ -196,7 +188,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun markScannedOwned(match: ScanMatch.InCollection) {
         addVolumes(match.series.id, setOf(match.volume))
-        val updated = _series.value.find { it.id == match.series.id } ?: return
+        val updated = series.value.find { it.id == match.series.id } ?: return
         (_scan.value as? ScanState.Found)?.let { _scan.value = it.copy(match = match.copy(series = updated)) }
     }
 
@@ -212,82 +204,39 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         _scan.value = null
     }
 
-    fun dismissSaveError() {
-        _saveFailed.value = false
-    }
+    fun dismissSaveError() = store.dismissSaveError()
 
-    fun addSeries(title: String, totalVolumes: Int?): Long {
-        // Deux ajouts dans la même milliseconde ne doivent pas partager un id.
-        val id = maxOf(System.currentTimeMillis(), (_series.value.maxOfOrNull { it.id } ?: 0) + 1)
-        update { it + Series(id = id, title = title, totalVolumes = totalVolumes) }
-        return id
-    }
+    fun addSeries(title: String, totalVolumes: Int?): Long = store.addSeries(title, totalVolumes)
 
-    fun editSeries(id: Long, title: String, totalVolumes: Int?) = updateSeries(id) {
-        it.copy(title = title, totalVolumes = totalVolumes)
-    }
+    fun editSeries(id: Long, title: String, totalVolumes: Int?) = store.editSeries(id, title, totalVolumes)
 
-    private val _undo = MutableStateFlow<UndoAction?>(null)
-    /** Dernière suppression ou dernier import, annulable quelques secondes (message « Annuler »). */
-    val undo: StateFlow<UndoAction?> = _undo.asStateFlow()
-
-    fun deleteSeries(id: Long) {
-        val deleted = _series.value.find { it.id == id } ?: return
-        update { list -> list.filterNot { it.id == id } }
-        _undo.value = UndoAction.Deleted(deleted)
-    }
+    fun deleteSeries(id: Long) = store.deleteSeries(id)
 
     fun undo() {
-        when (val action = _undo.value) {
-            is UndoAction.Deleted -> update { restoreSeries(it, action.series) }
-            is UndoAction.Imported -> update { action.previous }
-            null -> return
-        }
-        _undo.value = null
-        afterSave { ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched }) }
+        if (store.undo()) syncScheduler()
     }
 
-    /** Le message a disparu sans « Annuler » : on oublie l'état précédent. */
-    fun forgetUndo(action: UndoAction) {
-        if (_undo.value == action) _undo.value = null
-    }
+    fun forgetUndo(action: UndoAction) = store.forgetUndo(action)
 
-    fun toggleVolume(id: Long, volume: Int) {
-        // Hors bornes, la collection serait rejetée au prochain chargement.
-        if (volume !in 1..MAX_VOLUME) return
-        updateSeries(id) {
-            // Un tome retiré perd aussi son statut de lecture et son prêt.
-            if (volume in it.ownedVolumes) it.withoutVolume(volume) else it.copy(ownedVolumes = it.ownedVolumes + volume)
-        }
-    }
+    fun toggleVolume(id: Long, volume: Int) = store.toggleVolume(id, volume)
 
-    fun setRead(id: Long, volume: Int, read: Boolean) = updateSeries(id) { it.withRead(volume, read) }
+    fun setRead(id: Long, volume: Int, read: Boolean) = store.setRead(id, volume, read)
 
-    fun lend(id: Long, volume: Int, to: String) =
-        updateSeries(id) { it.withLoan(volume, to, LocalDate.now().toString()) }
+    fun lend(id: Long, volume: Int, to: String) = store.lend(id, volume, to, LocalDate.now().toString())
 
-    fun returnLoan(id: Long, volume: Int) = updateSeries(id) { it.withoutLoan(volume) }
+    fun returnLoan(id: Long, volume: Int) = store.returnLoan(id, volume)
 
-    fun addVolumes(id: Long, volumes: Set<Int>) = updateSeries(id) {
-        it.copy(ownedVolumes = it.ownedVolumes + volumes)
-    }
+    fun addVolumes(id: Long, volumes: Set<Int>) = store.addVolumes(id, volumes)
 
     /** Écrit la collection dans un fichier choisi par l'utilisateur. */
     suspend fun exportTo(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             val resolver = getApplication<Application>().contentResolver
             resolver.openOutputStream(uri)!!.use {
-                it.write(SeriesRepository.toJson(_series.value).toByteArray())
+                it.write(SeriesRepository.toJson(series.value).toByteArray())
             }
         }.isSuccess
     }
-
-    private val _pendingImport = MutableStateFlow<List<Series>?>(null)
-    /**
-     * Sauvegarde lue, en attente de confirmation. Gardée ici plutôt que dans l'écran : elle
-     * survit à une rotation ou à un changement de thème pendant que la confirmation est affichée.
-     */
-    val pendingImport: StateFlow<List<Series>?> = _pendingImport.asStateFlow()
 
     /**
      * Lit un fichier exporté et le met en attente de confirmation, sans rien appliquer.
@@ -295,48 +244,35 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
      */
     suspend fun readBackup(uri: Uri): Boolean {
         val series = parseBackup(uri) ?: return false
-        _pendingImport.value = series
+        store.setPendingImport(series)
         return true
     }
 
-    /** Remplace la collection par la sauvegarde en attente ; renvoie le nombre de séries importées. */
     fun confirmImport() {
-        val series = _pendingImport.value ?: return
-        _pendingImport.value = null
-        val recovering = _unreadable.value
-        _unreadable.value = false
-        val previous = _series.value
-        replaceAll(series)
-        if (!recovering) _undo.value = UndoAction.Imported(previous, series.size)
+        store.confirmImport()
+        syncScheduler()
     }
+
+    fun cancelImport() = store.cancelImport()
 
     /** Collection illisible : propose la dernière sauvegarde automatique (via la confirmation d'import). */
     suspend fun loadLatestBackup(): Boolean {
         val (_, text) = AutoBackup.readLatest(getApplication<Application>()) ?: return false
         val series = runCatching { SeriesRepository.fromJson(text) }.getOrNull() ?: return false
-        _pendingImport.value = series
+        store.setPendingImport(series)
         return true
     }
 
     /** Collection illisible : copie du fichier abîmé dans un fichier choisi par l'utilisateur. */
     suspend fun exportDamaged(uri: Uri): Boolean = withContext(Dispatchers.IO) {
-        val bytes = repository.readDamaged() ?: return@withContext false
+        val bytes = store.readDamaged() ?: return@withContext false
         runCatching {
             getApplication<Application>().contentResolver.openOutputStream(uri)!!.use { it.write(bytes) }
         }.isSuccess
     }
 
-    /**
-     * Collection illisible : l'utilisateur choisit de repartir de zéro. Une copie datée du fichier
-     * abîmé a été mise de côté au chargement ; series.json sera remplacé à la prochaine modification.
-     */
-    fun startEmpty() {
-        _unreadable.value = false
-    }
-
-    fun cancelImport() {
-        _pendingImport.value = null
-    }
+    /** Collection illisible : repartir de zéro (choix confirmé par l'utilisateur). */
+    fun startEmpty() = store.startEmpty()
 
     private suspend fun parseBackup(uri: Uri): List<Series>? = withContext(Dispatchers.IO) {
         runCatching {
@@ -359,31 +295,10 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         return out.toByteArray()
     }
 
-    private fun replaceAll(series: List<Series>) {
-        update { series }
-        afterSave { ReleaseScheduler.sync(getApplication<Application>(), _series.value.any { it.watched }) }
+    /** La surveillance périodique suit la présence de séries surveillées, après les écritures en cours. */
+    private fun syncScheduler() {
+        store.afterSave { ReleaseScheduler.sync(getApplication<Application>(), store.anyWatched) }
     }
-
-    private fun updateSeries(id: Long, transform: (Series) -> Series) = update { list ->
-        list.map { if (it.id == id) transform(it) else it }
-    }
-
-    private fun update(transform: (List<Series>) -> List<Series>) {
-        if (_unreadable.value) return
-        val newList = sorted(transform(_series.value))
-        _series.value = newList
-        saver.execute {
-            try {
-                repository.save(newList)
-                AutoBackup.scheduleAfterChange(getApplication<Application>())
-                MangaWidgetUpdater.update(getApplication<Application>())
-            } catch (e: IOException) {
-                _saveFailed.value = true
-            }
-        }
-    }
-
-    private fun sorted(list: List<Series>) = list.sortedWith(seriesOrder())
 
     override fun onCleared() {
         saver.shutdown()
@@ -395,12 +310,6 @@ sealed interface CoverSearch {
     /** partial : Google Books n'a pas répondu, seules les couvertures déjà connues sont proposées. */
     data class Results(val choices: List<Release>, val partial: Boolean = false) : CoverSearch
     data object Failed : CoverSearch
-}
-
-sealed interface UndoAction {
-    data class Deleted(val series: Series) : UndoAction
-    /** previous : la collection remplacée par l'import. */
-    data class Imported(val previous: List<Series>, val count: Int) : UndoAction
 }
 
 sealed interface ScanState {

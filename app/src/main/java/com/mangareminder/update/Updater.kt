@@ -118,19 +118,15 @@ class Updater(context: Context) {
         val pm = context.packageManager
         val archive = pm.getPackageArchiveInfo(apk.path, signingFlags())
             ?: throw UpdateException(R.string.update_err_not_apk)
-        if (archive.packageName != context.packageName) {
-            throw UpdateException(R.string.update_err_wrong_package)
-        }
-        val archiveCode = PackageInfoCompat.getLongVersionCode(archive)
-        if (archiveCode != info.versionCode.toLong() || archiveCode <= BuildConfig.VERSION_CODE) {
-            throw UpdateException(R.string.update_err_version_mismatch)
-        }
-        val installed = signerDigests(pm.getPackageInfo(context.packageName, signingFlags()))
-        val downloaded = signerDigests(archive)
-        if (downloaded.isEmpty()) throw UpdateException(R.string.update_err_signature_unreadable)
-        if (downloaded != installed) {
-            throw UpdateException(R.string.update_err_wrong_signature)
-        }
+        checkDownloadedPackage(
+            packageName = archive.packageName,
+            expectedPackage = context.packageName,
+            versionCode = PackageInfoCompat.getLongVersionCode(archive),
+            releaseVersionCode = info.versionCode,
+            installedVersionCode = BuildConfig.VERSION_CODE.toLong(),
+            downloadedSigners = signerDigests(archive),
+            installedSigners = signerDigests(pm.getPackageInfo(context.packageName, signingFlags())),
+        )?.let { throw UpdateException(it) }
     }
 
     @Suppress("DEPRECATION")
