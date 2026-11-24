@@ -175,6 +175,7 @@
     <string name="release_published">Tome %1$d · paru le %2$s</string>
     <string name="channel_releases">Sorties de tomes</string>
     <string name="notif_new_volume">Nouveau tome : %1$s</string>
+    <string name="action_got_it">Je l\'ai</string>
     <string name="notif_volume_out">Disponible : %1$s</string>
     <string name="notif_out_today">Tome %1$d · sorti aujourd\'hui</string>
     <string name="notif_out_since">Tome %1$d · sorti le %2$s</string>

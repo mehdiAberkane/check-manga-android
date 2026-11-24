@@ -193,4 +193,26 @@ class CollectionStoreTest {
         s.addSeries("Naruto", null)
         assertEquals(s.series.value, saved)
     }
+
+    @Test
+    fun `« Je l'ai » d'une notification, valeurs vérifiées`() {
+        val s = store()
+        val id = s.addSeries("Naruto", 72)
+        assertTrue(s.markOwned(id, 12))
+        assertEquals(setOf(12), (reload() as LoadResult.Ok).series.single().ownedVolumes)
+        // Série inconnue (supprimée depuis la notification), tome hors bornes : rien n'est écrit.
+        val before = saves
+        assertFalse(s.markOwned(id + 1, 13))
+        assertFalse(s.markOwned(id, 0))
+        assertFalse(s.markOwned(id, 1000))
+        assertEquals(before, saves)
+    }
+
+    @Test
+    fun `« Je l'ai » refusé tant que la collection n'est pas lue ou est illisible`() {
+        assertFalse(CollectionStore(SeriesRepository(tmp.root), direct).markOwned(1, 1))
+        File(tmp.root, "series.json").writeText("pas du json")
+        assertFalse(store().markOwned(1, 1))
+        assertEquals("pas du json", File(tmp.root, "series.json").readText())
+    }
 }

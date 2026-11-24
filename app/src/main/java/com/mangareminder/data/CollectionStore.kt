@@ -128,6 +128,18 @@ class CollectionStore(
         it.copy(ownedVolumes = it.ownedVolumes + volumes.filter { v -> v in 1..MAX_VOLUME })
     }
 
+    /**
+     * Coche un tome venu de l'extérieur de l'app (bouton « Je l'ai » d'une notification) : les
+     * valeurs ne sont pas fiables.
+     * @return false si rien n'a été fait : collection pas lue ou illisible, série inconnue, tome hors bornes.
+     */
+    fun markOwned(id: Long, volume: Int): Boolean {
+        if (!_loaded.value || _unreadable.value || volume !in 1..MAX_VOLUME) return false
+        if (_series.value.none { it.id == id }) return false
+        addVolumes(id, setOf(volume))
+        return true
+    }
+
     fun setRead(id: Long, volume: Int, read: Boolean) = updateSeries(id) { it.withRead(volume, read) }
 
     fun lend(id: Long, volume: Int, to: String, date: String) = updateSeries(id) { it.withLoan(volume, to, date) }

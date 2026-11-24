@@ -35,6 +35,7 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   que le dernier possédé (ou que le total indiqué) apparaît. « Vérifier les sorties » (menu ⋮) force
   une recherche. Le jour de la sortie d'un tome daté qu'on n'a pas encore (ou dans les 7 jours si le
   téléphone était hors ligne), une seconde notification rappelle qu'il est disponible, une seule fois.
+  Les notifications et les lignes de sortie de la fiche ont un bouton « Je l'ai », qui coche le tome.
 
   Un livre n'est compté comme un tome de la série que si son titre commence par le titre de la série, suivi
   seulement de mots neutres (« édition originale », « tome »…) avant le numéro : les séries dérivées
