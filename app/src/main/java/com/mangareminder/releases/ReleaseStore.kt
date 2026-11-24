@@ -6,6 +6,8 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Résultats des vérifications, par id de série, dans releases.json.
@@ -20,13 +22,19 @@ object ReleaseStore {
     private val _checking = MutableStateFlow(false)
     val checking: StateFlow<Boolean> = _checking.asStateFlow()
 
-    private val _lastError = MutableStateFlow<String?>(null)
-    /** Message de la dernière vérification si une source n'a pas répondu. */
-    val lastError: StateFlow<String?> = _lastError.asStateFlow()
+    private val _lastError = MutableStateFlow<CheckError?>(null)
+    /** Échec de la dernière vérification, gardé (préférences privées) jusqu'à la suivante qui réussit. */
+    val lastError: StateFlow<CheckError?> = _lastError.asStateFlow()
+
+    private var prefs: SharedPreferences? = null
 
     @Synchronized
     fun init(context: Context) {
         if (file != null) return
+        prefs = context.applicationContext.getSharedPreferences("release_check", Context.MODE_PRIVATE).also { p ->
+            val failure = p.getString("error", null)?.let { name -> CheckFailure.entries.firstOrNull { it.name == name } }
+            _lastError.value = failure?.let { CheckError(it, p.getInt("failed", 0), p.getLong("at", 0)) }
+        }
         val f = File(context.applicationContext.filesDir, "releases.json")
         file = f
         _data.value = try {
@@ -63,8 +71,17 @@ object ReleaseStore {
         _checking.value = value
     }
 
-    fun setError(message: String?) {
-        _lastError.value = message
+    fun setError(error: CheckError?) {
+        _lastError.value = error
+        prefs?.edit {
+            if (error == null) {
+                clear()
+            } else {
+                putString("error", error.failure.name)
+                putInt("failed", error.failedSeries)
+                putLong("at", error.at)
+            }
+        }
     }
 
     private fun save() {

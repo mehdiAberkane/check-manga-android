@@ -42,6 +42,12 @@ import com.mangareminder.releases.Http
 import java.net.URL
 import com.mangareminder.data.UndoAction
 import com.mangareminder.data.CollectionStore
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import com.mangareminder.releases.CheckError
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     // Un seul fil d'écriture : les enregistrements s'appliquent dans l'ordre des modifications.
@@ -80,8 +86,19 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Dernières sorties trouvées, par id de série. */
     val releases: StateFlow<Map<Long, SeriesReleases>> = ReleaseStore.data
-    val checking: StateFlow<Boolean> = ReleaseStore.checking
-    val checkError: StateFlow<String?> = ReleaseStore.lastError
+    /**
+     * Vérification en cours, ou demandée et pas encore lancée (attente du réseau). Une tâche en
+     * attente d'un nouvel essai ne compte pas : le bouton « Vérifier maintenant » resterait grisé.
+     */
+    val checking: StateFlow<Boolean> = combine(
+        ReleaseStore.checking,
+        WorkManager.getInstance(app).getWorkInfosForUniqueWorkFlow(ReleaseScheduler.NOW_WORK),
+    ) { running, infos ->
+        running || infos.any {
+            it.state == WorkInfo.State.RUNNING || (it.state == WorkInfo.State.ENQUEUED && it.runAttemptCount == 0)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val checkError: StateFlow<CheckError?> = ReleaseStore.lastError
 
     /** Active ou coupe la surveillance ; une activation lance une vérification immédiate. */
     fun toggleWatch(id: Long) {

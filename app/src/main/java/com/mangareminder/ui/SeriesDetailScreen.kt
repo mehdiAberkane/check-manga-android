@@ -81,6 +81,9 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Person
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.remember
+import com.mangareminder.releases.CheckError
+import com.mangareminder.releases.CheckFailure
+import androidx.compose.ui.res.pluralStringResource
 
 @Composable
 fun SeriesDetailScreen(
@@ -92,7 +95,7 @@ fun SeriesDetailScreen(
     onDelete: () -> Unit,
     releases: SeriesReleases?,
     checking: Boolean,
-    checkError: String?,
+    checkError: CheckError?,
     onToggleWatch: () -> Unit,
     onCheckNow: () -> Unit,
     coverSearch: CoverSearch?,
@@ -386,7 +389,7 @@ private fun ReleasesCard(
     series: Series,
     releases: SeriesReleases?,
     checking: Boolean,
-    checkError: String?,
+    checkError: CheckError?,
     onCheckNow: () -> Unit,
     notificationsBlocked: Boolean = false,
     onOpenNotificationSettings: () -> Unit = {},
@@ -454,7 +457,7 @@ private fun ReleasesCard(
                 )
             }
             checkError?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(checkErrorText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             OutlinedButton(onClick = onCheckNow, enabled = !checking) { Text(stringResource(R.string.action_check_now)) }
         }
@@ -462,3 +465,16 @@ private fun ReleasesCard(
 }
 
 private const val MAX_SHOWN_RELEASES = 5
+
+/** « 1 série non vérifiée le 24/11/2026 21:30 : Google Books refuse les requêtes (quota épuisé)… ». */
+@Composable
+private fun checkErrorText(error: CheckError): String = pluralStringResource(
+    when (error.failure) {
+        CheckFailure.QUOTA -> R.plurals.check_failed_quota
+        CheckFailure.NETWORK -> R.plurals.check_failed_network
+        CheckFailure.INVALID -> R.plurals.check_failed_invalid
+    },
+    error.failedSeries,
+    error.failedSeries,
+    formatDateTime(error.at),
+)

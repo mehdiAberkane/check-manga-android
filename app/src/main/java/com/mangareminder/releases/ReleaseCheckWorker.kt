@@ -48,16 +48,16 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
 
         ReleaseStore.setChecking(true)
         val news = mutableListOf<Pair<Series, Release>>()
-        var failures = 0
+        val failures = mutableListOf<CheckFailure>()
         try {
             for (series in watched) {
                 val found = try {
                     mergeReleases(SOURCES.flatMap { it.search(series.title) })
                 } catch (e: IOException) {
-                    failures++
+                    failures += failureOf(e)
                     continue
                 } catch (e: JSONException) {
-                    failures++
+                    failures += failureOf(e)
                     continue
                 }
                 val outcome = checkOutcome(series, found, ReleaseStore.get(series.id), System.currentTimeMillis())
@@ -68,13 +68,10 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
             ReleaseStore.setChecking(false)
         }
 
-        ReleaseStore.setError(
-            if (failures > 0) applicationContext.resources.getQuantityString(R.plurals.check_failures, failures, failures)
-            else null
-        )
+        ReleaseStore.setError(checkError(failures, System.currentTimeMillis()))
         ReleaseNotifier.notify(applicationContext, news)
         MangaWidgetUpdater.update(applicationContext, all, ReleaseStore.data.value)
-        if (failures == watched.size) Result.retry() else Result.success()
+        if (shouldRetry(failures, watched.size, runAttemptCount)) Result.retry() else Result.success()
     }
 
     companion object {
@@ -104,10 +101,17 @@ object ReleaseScheduler {
         }
     }
 
+    /** Nom de la tâche ponctuelle, observé par l'écran pour afficher « Recherche en cours… ». */
+    const val NOW_WORK = NOW
+
+    /**
+     * Remplace une vérification ponctuelle en attente (nouvel essai programmé, réseau absent) :
+     * un appui lance toujours une vérification. La tâche périodique n'est pas touchée.
+     */
     fun checkNow(context: Context) {
         WorkManager.getInstance(context).enqueueUniqueWork(
             NOW,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<ReleaseCheckWorker>().setConstraints(network).build(),
         )
     }
