@@ -84,6 +84,7 @@ import androidx.compose.runtime.remember
 import com.mangareminder.releases.CheckError
 import com.mangareminder.releases.CheckFailure
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.unit.Dp
 
 @Composable
 fun SeriesDetailScreen(
@@ -105,6 +106,7 @@ fun SeriesDetailScreen(
     onSetRead: (volume: Int, read: Boolean) -> Unit,
     onLend: (volume: Int, to: String) -> Unit,
     onReturnLoan: (volume: Int) -> Unit,
+    gridMinSize: Dp = 60.dp,
 ) {
     // Tome dont on modifie le statut (appui long sur une case possédée).
     var statusVolume by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -172,7 +174,7 @@ fun SeriesDetailScreen(
         },
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 60.dp),
+            columns = GridCells.Adaptive(minSize = gridMinSize),
             modifier = Modifier.padding(padding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
