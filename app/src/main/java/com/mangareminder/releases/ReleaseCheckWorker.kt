@@ -2,6 +2,7 @@ package com.mangareminder.releases
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -30,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONException
 import java.io.IOException
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
@@ -48,6 +50,7 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
 
         ReleaseStore.setChecking(true)
         val news = mutableListOf<Pair<Series, Release>>()
+        val reminders = mutableListOf<Pair<Series, Release>>()
         val failures = mutableListOf<CheckFailure>()
         try {
             for (series in watched) {
@@ -62,6 +65,7 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
                 }
                 val outcome = checkOutcome(series, found, ReleaseStore.get(series.id), System.currentTimeMillis())
                 outcome.notify?.let { news += series to it }
+                outcome.remind?.let { reminders += series to it }
                 ReleaseStore.put(series.id, outcome.stored)
             }
         } finally {
@@ -69,7 +73,7 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
         }
 
         ReleaseStore.setError(checkError(failures, System.currentTimeMillis()))
-        ReleaseNotifier.notify(applicationContext, news)
+        ReleaseNotifier.notify(applicationContext, news, reminders)
         MangaWidgetUpdater.update(applicationContext, all, ReleaseStore.data.value)
         if (shouldRetry(failures, watched.size, runAttemptCount)) Result.retry() else Result.success()
     }
@@ -133,31 +137,49 @@ object ReleaseNotifier {
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 
     @SuppressLint("MissingPermission") // Vérifiée par canNotify().
-    fun notify(context: Context, news: List<Pair<Series, Release>>) {
-        if (news.isEmpty() || !canNotify(context)) return
+    fun notify(context: Context, news: List<Pair<Series, Release>>, reminders: List<Pair<Series, Release>> = emptyList()) {
+        if ((news.isEmpty() && reminders.isEmpty()) || !canNotify(context)) return
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL, context.getString(R.string.channel_releases), NotificationManager.IMPORTANCE_DEFAULT)
         )
         news.forEach { (series, release) ->
-            // Un appui ouvre la fiche de la série : un code de requête par série, sinon Android
-            // réutiliserait la même intention (et le même extra) pour toutes les notifications.
-            val openSeries = PendingIntent.getActivity(
-                context,
+            manager.notify(
                 series.id.hashCode(),
-                Intent(context, MainActivity::class.java)
-                    .putExtra(MainActivity.EXTRA_SERIES_ID, series.id)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                build(context, series, context.getString(R.string.notif_new_volume, series.title), release.describe().text(context)),
             )
-            val notification = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(context.getString(R.string.notif_new_volume, series.title))
-                .setContentText(release.describe().text(context))
-                .setContentIntent(openSeries)
-                .setAutoCancel(true)
-                .build()
-            manager.notify(series.id.hashCode(), notification)
+        }
+        // Rappel du jour de sortie : identifiant distinct, il ne remplace pas une annonce encore affichée.
+        reminders.forEach { (series, release) ->
+            val today = LocalDate.now().toString()
+            val text = if (release.date == today) context.getString(R.string.notif_out_today, release.volume)
+            else context.getString(R.string.notif_out_since, release.volume, formatReleaseDate(release.date))
+            manager.notify(
+                series.id.hashCode() xor REMINDER_ID,
+                build(context, series, context.getString(R.string.notif_volume_out, series.title), text),
+            )
         }
     }
+
+    private fun build(context: Context, series: Series, title: String, text: String): Notification {
+        // Un appui ouvre la fiche de la série : un code de requête par série, sinon Android
+        // réutiliserait la même intention (et le même extra) pour toutes les notifications.
+        val openSeries = PendingIntent.getActivity(
+            context,
+            series.id.hashCode(),
+            Intent(context, MainActivity::class.java)
+                .putExtra(MainActivity.EXTRA_SERIES_ID, series.id)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setContentIntent(openSeries)
+            .setAutoCancel(true)
+            .build()
+    }
+
+    private const val REMINDER_ID = 0x5EED
 }

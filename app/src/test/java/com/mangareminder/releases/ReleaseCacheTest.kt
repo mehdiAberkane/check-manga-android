@@ -20,7 +20,7 @@ class ReleaseCacheTest {
     @Test
     fun `aller-retour sans perte`() {
         val data = mapOf(
-            42L to SeriesReleases(1_700_000_000_000, listOf(release(12), release(11, date = null, link = null)), 11),
+            42L to SeriesReleases(1_700_000_000_000, listOf(release(12), release(11, date = null, link = null)), 11, remindedMax = 10),
         )
         assertEquals(data, releaseCacheFromJson(releaseCacheToJson(data)))
     }
@@ -87,5 +87,13 @@ class ReleaseCacheTest {
     fun `fichier qui n'est pas un objet JSON refusé`() {
         assertThrows(JSONException::class.java) { releaseCacheFromJson("[]") }
         assertThrows(JSONException::class.java) { releaseCacheFromJson("<html>") }
+    }
+
+    @Test
+    fun `ancien cache sans remindedMax relu, valeur bornée`() {
+        val old = releaseCacheFromJson("""{"1":{"checkedAt":5,"notifiedMax":3,"releases":[]}}""")
+        assertEquals(0, old.getValue(1L).remindedMax)
+        val tooHigh = releaseCacheFromJson("""{"1":{"checkedAt":5,"remindedMax":5000,"releases":[]}}""")
+        assertEquals(999, tooHigh.getValue(1L).remindedMax)
     }
 }

@@ -47,6 +47,7 @@ fun SeriesReleases.sanitized(): SeriesReleases = SeriesReleases(
     checkedAt = checkedAt.coerceAtLeast(0),
     releases = mergeReleases(releases.mapNotNull { it.sanitized() }).take(MAX_RELEASES_PER_SERIES),
     notifiedMax = notifiedMax.coerceIn(0, MAX_RELEASE_VOLUME),
+    remindedMax = remindedMax.coerceIn(0, MAX_RELEASE_VOLUME),
 )
 
 fun releaseCacheToJson(data: Map<Long, SeriesReleases>): String {
@@ -55,6 +56,7 @@ fun releaseCacheToJson(data: Map<Long, SeriesReleases>): String {
         root.put(id.toString(), JSONObject().apply {
             put("checkedAt", sr.checkedAt)
             put("notifiedMax", sr.notifiedMax)
+            put("remindedMax", sr.remindedMax)
             put("releases", JSONArray().apply {
                 sr.releases.forEach { r ->
                     put(JSONObject().apply {
@@ -95,7 +97,10 @@ fun releaseCacheFromJson(text: String): Map<Long, SeriesReleases> {
                 cover = r.optString("cover").takeIf { it.isNotEmpty() },
             )
         }
-        result[id] = SeriesReleases(o.optLong("checkedAt", 0), releases, o.optInt("notifiedMax", 0)).sanitized()
+        // remindedMax : absent des caches écrits avant le rappel du jour de sortie.
+        result[id] = SeriesReleases(
+            o.optLong("checkedAt", 0), releases, o.optInt("notifiedMax", 0), o.optInt("remindedMax", 0),
+        ).sanitized()
     }
     return result
 }
