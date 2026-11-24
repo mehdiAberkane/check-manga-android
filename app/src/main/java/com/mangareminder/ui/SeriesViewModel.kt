@@ -51,11 +51,14 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     private val store = CollectionStore(
         SeriesRepository(app),
         saver,
-        afterSaved = {
+        afterSaved = { saved ->
             AutoBackup.scheduleAfterChange(app)
-            MangaWidgetUpdater.update(app)
+            MangaWidgetUpdater.update(app, saved, ReleaseStore.data.value)
         },
     )
+
+    /** Faux tant que la collection n'est pas lue (lecture hors du fil principal). */
+    val loaded: StateFlow<Boolean> = store.loaded
 
     val series: StateFlow<List<Series>> = store.series
     /** series.json illisible : rien n'est enregistré tant que l'utilisateur n'a pas choisi. */
@@ -65,9 +68,14 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
     val undo: StateFlow<UndoAction?> = store.undo
 
     init {
-        ReleaseStore.init(app)
         AutoBackup.init(app)
-        ReleaseScheduler.sync(app, store.anyWatched)
+        // Lecture des fichiers hors du fil principal ; l'écran affiche un chargement d'ici là.
+        viewModelScope.launch(Dispatchers.IO) {
+            ReleaseStore.init(app)
+            store.load()
+            ReleaseScheduler.sync(app, store.anyWatched)
+            CoverCache.cleanUpDaily(app, store.series.value, ReleaseStore.data.value)
+        }
     }
 
     /** Dernières sorties trouvées, par id de série. */

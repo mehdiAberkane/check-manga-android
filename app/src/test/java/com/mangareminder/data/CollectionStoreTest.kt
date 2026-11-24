@@ -21,7 +21,7 @@ class CollectionStoreTest {
     private var saves = 0
 
     private fun store(clock: () -> Long = { 1_000L }) =
-        CollectionStore(SeriesRepository(tmp.root), direct, clock, afterSaved = { saves++ })
+        CollectionStore(SeriesRepository(tmp.root), direct, clock, afterSaved = { saves++ }).also { it.load() }
 
     private fun reload() = SeriesRepository(tmp.root).load()
 
@@ -165,5 +165,32 @@ class CollectionStoreTest {
         assertTrue(s.toggleWatch(id))
         assertTrue(s.anyWatched)
         assertFalse(s.toggleWatch(id))
+    }
+
+    @Test
+    fun `rien n'est écrit avant la fin du chargement`() {
+        SeriesRepository(tmp.root).save(listOf(Series(1, "Naruto")))
+        val s = CollectionStore(SeriesRepository(tmp.root), direct, afterSaved = { saves++ })
+        assertFalse(s.loaded.value)
+        // Une modification avant la lecture écraserait la collection par une liste vide.
+        s.addSeries("One Piece", null)
+        assertEquals(0, saves)
+        assertEquals(LoadResult.Ok(listOf(Series(1, "Naruto"))), reload())
+
+        s.load()
+        assertTrue(s.loaded.value)
+        assertEquals(listOf("Naruto"), s.series.value.map { it.title })
+        // Un second chargement ne relit pas le fichier par-dessus les modifications en mémoire.
+        s.addSeries("One Piece", null)
+        s.load()
+        assertEquals(listOf("Naruto", "One Piece"), s.series.value.map { it.title })
+    }
+
+    @Test
+    fun `la collection enregistrée est transmise après l'écriture`() {
+        var saved: List<Series>? = null
+        val s = CollectionStore(SeriesRepository(tmp.root), direct, afterSaved = { saved = it }).also { it.load() }
+        s.addSeries("Naruto", null)
+        assertEquals(s.series.value, saved)
     }
 }

@@ -27,6 +27,11 @@ import com.mangareminder.ui.ShoppingListScreen
 import com.mangareminder.ui.ScanDialog
 import com.mangareminder.ui.startBarcodeScan
 import com.mangareminder.ui.UnreadableCollectionScreen
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 
 class MainActivity : ComponentActivity() {
     /** Demande d'ouverture de la liste « À acheter » (widget), consommée par l'écran. */
@@ -93,14 +98,16 @@ private fun MangaReminderApp(
     val undo by viewModel.undo.collectAsStateWithLifecycle()
     val scan by viewModel.scan.collectAsStateWithLifecycle()
     val unreadable by viewModel.collectionUnreadable.collectAsStateWithLifecycle()
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val startScan = { startBarcodeScan(context, onCode = viewModel::lookupIsbn, onUnavailable = viewModel::scanManually) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showShopping by rememberSaveable { mutableStateOf(false) }
     val selected = series.find { it.id == selectedId }
 
-    LaunchedEffect(openSeriesId) {
-        if (openSeriesId != null) {
+    // Attend la lecture de la collection : avant, la série demandée ne serait pas trouvée.
+    LaunchedEffect(openSeriesId, loaded) {
+        if (openSeriesId != null && loaded) {
             // Id inconnu (série supprimée, intention forgée) : on reste sur la liste.
             if (series.any { it.id == openSeriesId }) {
                 showShopping = false
@@ -116,6 +123,12 @@ private fun MangaReminderApp(
             showShopping = true
             onShoppingOpened()
         }
+    }
+
+    // Lecture de la collection en cours (hors du fil principal) : quelques millisecondes en général.
+    if (!loaded) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        return
     }
 
     // series.json illisible : rien d'autre n'est affiché tant que l'utilisateur n'a pas choisi.

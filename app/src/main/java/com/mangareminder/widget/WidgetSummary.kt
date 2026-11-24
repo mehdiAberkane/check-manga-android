@@ -33,3 +33,19 @@ fun widgetSummary(
     )
     return WidgetSummary(entries.sumOf { it.availableCount(today) }, sorted.take(WIDGET_MAX_RELEASES))
 }
+
+/**
+ * Évite de redessiner le widget quand son contenu n'a pas changé (la plupart des appuis sur un
+ * tome ne changent ni le nombre à acheter ni les prochaines sorties). Partagé entre les fils.
+ */
+class WidgetRedrawGate {
+    private var last: WidgetSummary? = null
+
+    /** Vrai si [summary] diffère du dernier contenu dessiné ; le retient comme dessiné. */
+    @Synchronized
+    fun shouldRedraw(summary: WidgetSummary): Boolean {
+        if (summary == last) return false
+        last = summary
+        return true
+    }
+}

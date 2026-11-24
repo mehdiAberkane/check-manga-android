@@ -28,6 +28,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URL
+import com.mangareminder.releases.usedCoverUrls
+import com.mangareminder.releases.coverFilesToDelete
+import com.mangareminder.releases.SeriesReleases
+import com.mangareminder.data.Series
+import androidx.core.content.edit
 
 /**
  * Miniatures de couvertures : en mémoire, puis dans le cache de l'app (vidé par Android si besoin,
@@ -40,6 +45,23 @@ object CoverCache {
     private val memory = LruCache<String, ImageBitmap>(80)
 
     fun cached(url: String): ImageBitmap? = memory.get(url)
+
+    /**
+     * Au plus une fois par jour : supprime du cache les couvertures qui ne servent plus (série
+     * supprimée, autre couverture choisie, sortie oubliée). Android vide aussi ce cache s'il manque
+     * de place ; ce nettoyage évite seulement qu'il grossisse sans fin.
+     */
+    fun cleanUpDaily(context: Context, series: List<Series>, releases: Map<Long, SeriesReleases>) {
+        val prefs = context.getSharedPreferences("covers", Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (now - prefs.getLong("last_cleanup", 0) < CLEANUP_INTERVAL_MS) return
+        val dir = File(context.cacheDir, "covers")
+        val names = dir.list()?.toList().orEmpty()
+        coverFilesToDelete(names, usedCoverUrls(series, releases)).forEach { File(dir, it).delete() }
+        prefs.edit { putLong("last_cleanup", now) }
+    }
+
+    private const val CLEANUP_INTERVAL_MS = 24L * 60 * 60 * 1000
 
     suspend fun load(context: Context, url: String): ImageBitmap? = withContext(Dispatchers.IO) {
         if (!isSafeCoverUrl(url)) return@withContext null
