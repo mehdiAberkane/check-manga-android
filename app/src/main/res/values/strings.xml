@@ -216,11 +216,6 @@
         <item quantity="many">%1$d tomes : %2$s</item>
         <item quantity="other">%1$d tomes : %2$s</item>
     </plurals>
-    <plurals name="check_failures">
-        <item quantity="one">%d série non vérifiée : Google Books n\'a pas répondu (quota ?).</item>
-        <item quantity="many">%d séries non vérifiées : Google Books n\'a pas répondu (quota ?).</item>
-        <item quantity="other">%d séries non vérifiées : Google Books n\'a pas répondu (quota ?).</item>
-    </plurals>
     <plurals name="backup_intro">
         <item quantity="one">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, le dernier est gardé. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
         <item quantity="many">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
@@ -235,5 +230,20 @@
         <item quantity="one">La série compte %d tome paru.</item>
         <item quantity="many">La série compte %d tomes parus.</item>
         <item quantity="other">La série compte %d tomes parus.</item>
+    </plurals>
+    <plurals name="check_failed_quota">
+        <item quantity="one">%1$d série non vérifiée le %2$s : Google Books refuse les requêtes (quota épuisé). Nouvel essai à la prochaine vérification.</item>
+        <item quantity="many">%1$d séries non vérifiées le %2$s : Google Books refuse les requêtes (quota épuisé). Nouvel essai à la prochaine vérification.</item>
+        <item quantity="other">%1$d séries non vérifiées le %2$s : Google Books refuse les requêtes (quota épuisé). Nouvel essai à la prochaine vérification.</item>
+    </plurals>
+    <plurals name="check_failed_network">
+        <item quantity="one">%1$d série non vérifiée le %2$s : Google Books n\'a pas répondu. Nouvel essai plus tard.</item>
+        <item quantity="many">%1$d séries non vérifiées le %2$s : Google Books n\'a pas répondu. Nouvel essai plus tard.</item>
+        <item quantity="other">%1$d séries non vérifiées le %2$s : Google Books n\'a pas répondu. Nouvel essai plus tard.</item>
+    </plurals>
+    <plurals name="check_failed_invalid">
+        <item quantity="one">%1$d série non vérifiée le %2$s : réponse de Google Books illisible.</item>
+        <item quantity="many">%1$d séries non vérifiées le %2$s : réponse de Google Books illisible.</item>
+        <item quantity="other">%1$d séries non vérifiées le %2$s : réponse de Google Books illisible.</item>
     </plurals>
 </resources>

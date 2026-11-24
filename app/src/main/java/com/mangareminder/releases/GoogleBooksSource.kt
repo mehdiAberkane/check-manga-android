@@ -98,7 +98,7 @@ object Http {
                     }
                     301, 302, 303, 307, 308 ->
                         current = redirectTarget(current, connection.getHeaderField("Location"), hosts)
-                    else -> throw IOException("HTTP $code")
+                    else -> throw HttpStatusException(code)
                 }
             } finally {
                 connection.disconnect()
