@@ -24,6 +24,7 @@ import com.mangareminder.update.UpdateState
 import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
 import com.mangareminder.ui.ShoppingListScreen
+import com.mangareminder.ui.UpcomingReleasesScreen
 import com.mangareminder.ui.ScanDialog
 import com.mangareminder.ui.startBarcodeScan
 import com.mangareminder.ui.UnreadableCollectionScreen
@@ -115,6 +116,7 @@ private fun MangaReminderApp(
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showShopping by rememberSaveable { mutableStateOf(false) }
     var showAppearance by rememberSaveable { mutableStateOf(false) }
+    var showUpcoming by rememberSaveable { mutableStateOf(false) }
     val appearance by appearanceViewModel.settings.collectAsStateWithLifecycle()
     val selected = series.find { it.id == selectedId }
 
@@ -124,6 +126,7 @@ private fun MangaReminderApp(
             // Id inconnu (série supprimée, intention forgée) : on reste sur la liste.
             if (series.any { it.id == openSeriesId }) {
                 showShopping = false
+                showUpcoming = false
                 selectedId = openSeriesId
             }
             onSeriesOpened()
@@ -133,6 +136,7 @@ private fun MangaReminderApp(
     LaunchedEffect(openShopping) {
         if (openShopping) {
             selectedId = null
+            showUpcoming = false
             showShopping = true
             onShoppingOpened()
         }
@@ -182,6 +186,14 @@ private fun MangaReminderApp(
             onBack = { showShopping = false },
             onOpen = { selectedId = it },
         )
+    } else if (selected == null && showUpcoming) {
+        BackHandler { showUpcoming = false }
+        UpcomingReleasesScreen(
+            series = series,
+            releases = releases,
+            onBack = { showUpcoming = false },
+            onOpen = { selectedId = it },
+        )
     } else if (selected == null) {
         SeriesListScreen(
             series = series,
@@ -197,6 +209,7 @@ private fun MangaReminderApp(
             onCheckUpdate = updateViewModel::check,
             onOpenShopping = { showShopping = true },
             onOpenAppearance = { showAppearance = true },
+            onOpenUpcoming = { showUpcoming = true },
             onScan = startScan,
             backupStatus = backupStatus,
             onEnableBackup = viewModel::enableBackup,
