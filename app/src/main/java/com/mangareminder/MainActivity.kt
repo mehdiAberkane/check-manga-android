@@ -32,6 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
+import android.widget.Toast
+import androidx.compose.ui.unit.dp
+import com.mangareminder.ui.AppBackground
+import com.mangareminder.ui.AppearanceScreen
+import com.mangareminder.ui.AppearanceViewModel
 
 class MainActivity : ComponentActivity() {
     /** Demande d'ouverture de la liste « À acheter » (widget), consommée par l'écran. */
@@ -48,13 +53,18 @@ class MainActivity : ComponentActivity() {
             openSeriesId.value = seriesIdOf(intent)
         }
         setContent {
-            MangaReminderTheme {
-                MangaReminderApp(
-                    openShopping = openShopping.value,
-                    onShoppingOpened = { openShopping.value = false },
-                    openSeriesId = openSeriesId.value,
-                    onSeriesOpened = { openSeriesId.value = null },
-                )
+            val appearanceViewModel: AppearanceViewModel = viewModel()
+            val appearance by appearanceViewModel.settings.collectAsStateWithLifecycle()
+            MangaReminderTheme(appearance) {
+                AppBackground(appearance, appearanceViewModel::loadBackground) {
+                    MangaReminderApp(
+                        openShopping = openShopping.value,
+                        onShoppingOpened = { openShopping.value = false },
+                        openSeriesId = openSeriesId.value,
+                        onSeriesOpened = { openSeriesId.value = null },
+                        appearanceViewModel = appearanceViewModel,
+                    )
+                }
             }
         }
     }
@@ -81,6 +91,7 @@ private fun MangaReminderApp(
     onShoppingOpened: () -> Unit,
     openSeriesId: Long?,
     onSeriesOpened: () -> Unit,
+    appearanceViewModel: AppearanceViewModel,
     viewModel: SeriesViewModel = viewModel(),
     updateViewModel: UpdateViewModel = viewModel(),
 ) {
@@ -103,6 +114,8 @@ private fun MangaReminderApp(
     val startScan = { startBarcodeScan(context, onCode = viewModel::lookupIsbn, onUnavailable = viewModel::scanManually) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showShopping by rememberSaveable { mutableStateOf(false) }
+    var showAppearance by rememberSaveable { mutableStateOf(false) }
+    val appearance by appearanceViewModel.settings.collectAsStateWithLifecycle()
     val selected = series.find { it.id == selectedId }
 
     // Attend la lecture de la collection : avant, la série demandée ne serait pas trouvée.
@@ -146,7 +159,22 @@ private fun MangaReminderApp(
         return
     }
 
-    if (selected == null && showShopping) {
+    if (selected == null && showAppearance) {
+        BackHandler { showAppearance = false }
+        AppearanceScreen(
+            settings = appearance,
+            onBack = { showAppearance = false },
+            onThemeMode = appearanceViewModel::setThemeMode,
+            onPureBlack = appearanceViewModel::setPureBlack,
+            onDynamicColor = appearanceViewModel::setDynamicColor,
+            onAccent = appearanceViewModel::setAccent,
+            onGridSize = appearanceViewModel::setGridSize,
+            onPickBackground = appearanceViewModel::setBackground,
+            onRemoveBackground = appearanceViewModel::removeBackground,
+            onBackgroundDim = appearanceViewModel::setBackgroundDim,
+            onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() },
+        )
+    } else if (selected == null && showShopping) {
         BackHandler { showShopping = false }
         ShoppingListScreen(
             series = series,
@@ -168,6 +196,7 @@ private fun MangaReminderApp(
             onCheckReleases = viewModel::checkReleasesNow,
             onCheckUpdate = updateViewModel::check,
             onOpenShopping = { showShopping = true },
+            onOpenAppearance = { showAppearance = true },
             onScan = startScan,
             backupStatus = backupStatus,
             onEnableBackup = viewModel::enableBackup,
@@ -206,6 +235,7 @@ private fun MangaReminderApp(
             onSetRead = { volume, read -> viewModel.setRead(selected.id, volume, read) },
             onLend = { volume, to -> viewModel.lend(selected.id, volume, to) },
             onReturnLoan = { volume -> viewModel.returnLoan(selected.id, volume) },
+            gridMinSize = appearance.gridSize.minDp.dp,
         )
     }
 

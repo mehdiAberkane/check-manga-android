@@ -52,6 +52,10 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
 - Widget d'écran d'accueil « Tomes à acheter » : nombre de tomes à acheter (manquants, plus les tomes
   déjà parus après le dernier connu des séries surveillées) et les 3 prochaines sorties. Mis à jour après
   chaque modification et chaque vérification des sorties ; un appui ouvre la liste « À acheter ».
+- Apparence (menu ⋮) : thème comme le téléphone / clair / sombre, noir pur (OLED), couleurs du téléphone
+  (Material You, Android 12+) ou couleur principale au choix, taille des cases des tomes, fond d'écran tiré
+  de la galerie (sélecteur de photos, sans permission), copié et réduit dans l'app, atténué par un filtre
+  réglable, derrière toutes les pages. Réglages gardés sur le téléphone, hors collection et hors sauvegarde.
 - Mise à jour intégrée (menu ⋮ > « Rechercher une mise à jour ») : l'app lit la dernière release
   stable de GitHub, télécharge son APK et l'installe, sans perdre la collection. Avant l'installation,
   elle vérifie la taille, le SHA-256 (`version.json` et l'empreinte calculée par GitHub), le nom du
