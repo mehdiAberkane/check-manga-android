@@ -94,4 +94,18 @@ class CoverTest {
         val bad = """[{"id": 1, "title": "Naruto", "owned": [], "cover": "https://evil.example/x.jpg"}]"""
         assertNull(SeriesRepository.fromJson(bad).single().cover)
     }
+
+    @Test
+    fun `nettoyage du cache, couvertures encore utilisées gardées`() {
+        val chosen = "$gb&v=1"
+        val found = "$gb&v=2"
+        val forgotten = "$gb&v=3"
+        val series = listOf(Series(1, "Naruto", cover = chosen), Series(2, "Bleach"))
+        val releases = mapOf(2L to SeriesReleases(0, listOf(Release(4, "Bleach 4", null, "s", null, cover = found)), 0))
+        val used = usedCoverUrls(series, releases)
+        assertEquals(setOf(chosen, found), used)
+        val files = listOf(coverCacheName(chosen), coverCacheName(found), coverCacheName(forgotten), "${coverCacheName(chosen)}.tmp")
+        assertEquals(listOf(coverCacheName(forgotten), "${coverCacheName(chosen)}.tmp"), coverFilesToDelete(files, used))
+        assertEquals(files, coverFilesToDelete(files, emptySet()))
+    }
 }

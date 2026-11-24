@@ -73,7 +73,7 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
             else null
         )
         ReleaseNotifier.notify(applicationContext, news)
-        MangaWidgetUpdater.update(applicationContext)
+        MangaWidgetUpdater.update(applicationContext, all, ReleaseStore.data.value)
         if (failures == watched.size) Result.retry() else Result.success()
     }
 

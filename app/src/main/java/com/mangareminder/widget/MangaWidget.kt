@@ -15,35 +15,49 @@ import com.mangareminder.releases.SeriesReleases
 import com.mangareminder.releases.releaseCacheFromJson
 import org.json.JSONException
 import java.io.File
+import com.mangareminder.data.Series
 
 /** Widget d'écran d'accueil : tomes à acheter et prochaines sorties des séries surveillées. */
 class MangaWidget : AppWidgetProvider() {
+    /** Demandé par Android (ajout du widget, une fois par jour) : relecture des fichiers, toujours redessiné. */
     override fun onUpdate(context: Context, manager: AppWidgetManager, widgetIds: IntArray) {
-        MangaWidgetUpdater.update(context)
+        MangaWidgetUpdater.updateFromFiles(context)
     }
 }
 
 object MangaWidgetUpdater {
 
+    private val gate = WidgetRedrawGate()
+
     /**
-     * Redessine tous les widgets à partir des fichiers de l'app. Appelé après chaque modification
-     * de la collection, après chaque vérification des sorties, et par Android une fois par jour.
-     * Lecture seule : un fichier illisible donne un widget vide, sans rien toucher.
+     * Après une modification de la collection ou une vérification des sorties : à partir des données
+     * déjà en mémoire, sans relire les fichiers, et seulement si le contenu du widget a changé.
      */
-    fun update(context: Context) {
-        val manager = AppWidgetManager.getInstance(context)
-        val ids = manager.getAppWidgetIds(ComponentName(context, MangaWidget::class.java))
-        if (ids.isEmpty()) return
-        manager.updateAppWidget(ids, views(context))
+    fun update(context: Context, series: List<Series>, releases: Map<Long, SeriesReleases>) {
+        val summary = widgetSummary(series, releases)
+        if (gate.shouldRedraw(summary)) draw(context, summary)
     }
 
-    private fun views(context: Context): RemoteViews {
+    /** Relecture des fichiers (appel d'Android) : lecture seule, un fichier illisible donne un widget vide. */
+    fun updateFromFiles(context: Context) {
         val series = try {
             SeriesRepository(context).readRaw()?.let { SeriesRepository.fromJson(it) }.orEmpty()
         } catch (e: JSONException) {
             emptyList()
         }
         val summary = widgetSummary(series, readReleases(context))
+        gate.shouldRedraw(summary)
+        draw(context, summary)
+    }
+
+    private fun draw(context: Context, summary: WidgetSummary) {
+        val manager = AppWidgetManager.getInstance(context)
+        val ids = manager.getAppWidgetIds(ComponentName(context, MangaWidget::class.java))
+        if (ids.isEmpty()) return
+        manager.updateAppWidget(ids, views(context, summary))
+    }
+
+    private fun views(context: Context, summary: WidgetSummary): RemoteViews {
         val res = context.resources
         return RemoteViews(context.packageName, R.layout.widget).apply {
             setTextViewText(

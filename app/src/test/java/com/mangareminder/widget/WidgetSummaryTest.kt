@@ -4,6 +4,8 @@ import com.mangareminder.data.Series
 import com.mangareminder.releases.Release
 import com.mangareminder.releases.SeriesReleases
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -52,5 +54,15 @@ class WidgetSummaryTest {
     @Test
     fun `collection vide`() {
         assertEquals(WidgetSummary(0, emptyList()), widgetSummary(emptyList(), emptyMap(), today))
+    }
+
+    @Test
+    fun `widget redessiné seulement quand son contenu change`() {
+        val gate = WidgetRedrawGate()
+        val a = WidgetSummary(3, emptyList())
+        assertTrue(gate.shouldRedraw(a))
+        assertFalse(gate.shouldRedraw(a))
+        assertFalse(gate.shouldRedraw(WidgetSummary(3, emptyList())))
+        assertTrue(gate.shouldRedraw(WidgetSummary(2, emptyList())))
     }
 }

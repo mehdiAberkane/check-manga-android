@@ -1,5 +1,6 @@
 package com.mangareminder.releases
 
+import com.mangareminder.data.Series
 import java.net.URI
 import java.security.MessageDigest
 
@@ -48,3 +49,18 @@ fun SeriesReleases?.autoCover(): String? =
 /** Couvertures proposées au choix, une par tome, dans l'ordre des tomes. */
 fun coverChoices(releases: List<Release>): List<Release> =
     releases.filter { it.cover != null }.distinctBy { it.cover }.sortedBy { it.volume }
+
+/**
+ * Fichiers du cache des couvertures à supprimer : ceux qui ne correspondent à aucune couverture
+ * encore utile (série ou sortie connue), et les fichiers temporaires laissés par un téléchargement
+ * interrompu.
+ */
+fun coverFilesToDelete(fileNames: Collection<String>, usedUrls: Collection<String>): List<String> {
+    val keep = usedUrls.map { coverCacheName(it) }.toSet()
+    return fileNames.filter { it !in keep }
+}
+
+/** Adresses des couvertures encore utilisées : choisies pour une série, ou trouvées par la surveillance. */
+fun usedCoverUrls(series: List<Series>, releases: Map<Long, SeriesReleases>): Set<String> =
+    series.mapNotNull { it.cover }.toSet() + releases.values.flatMap { sr -> sr.releases.mapNotNull { it.cover } }
+

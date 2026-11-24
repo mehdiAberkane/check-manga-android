@@ -17,21 +17,27 @@ sealed interface UndoAction {
  * La collection en mémoire et son enregistrement, sans dépendance Android (testée en unitaire
  * sur un dossier temporaire). Le ViewModel n'y ajoute que les effets propres à Android.
  *
+ * La collection est lue par [load], à appeler hors du fil principal. Avant la fin du chargement,
+ * les modifications sont ignorées : elles écraseraient le fichier par une collection vide.
+ *
  * @param saver un seul fil d'écriture : les enregistrements s'appliquent dans l'ordre des modifications.
- * @param afterSaved appelé après chaque enregistrement réussi (sauvegarde automatique, widget).
+ * @param afterSaved appelé après chaque enregistrement réussi, avec la collection enregistrée
+ *   (sauvegarde automatique, widget).
  */
 class CollectionStore(
     private val repository: SeriesRepository,
     private val saver: Executor,
     private val clock: () -> Long = System::currentTimeMillis,
-    private val afterSaved: () -> Unit = {},
+    private val afterSaved: (List<Series>) -> Unit = {},
 ) {
-    private val initialLoad = repository.load()
+    private val _loaded = MutableStateFlow(false)
+    /** Faux tant que series.json n'a pas été lu : l'écran affiche un chargement. */
+    val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
 
-    private val _series = MutableStateFlow(sorted((initialLoad as? LoadResult.Ok)?.series.orEmpty()))
+    private val _series = MutableStateFlow<List<Series>>(emptyList())
     val series: StateFlow<List<Series>> = _series.asStateFlow()
 
-    private val _unreadable = MutableStateFlow(initialLoad is LoadResult.Unreadable)
+    private val _unreadable = MutableStateFlow(false)
     /**
      * series.json existe mais n'a pas pu être lu. Tant que l'utilisateur n'a pas choisi (restaurer,
      * importer, repartir de zéro), aucune modification n'est enregistrée : le fichier reste intact.
@@ -50,6 +56,16 @@ class CollectionStore(
     val undo: StateFlow<UndoAction?> = _undo.asStateFlow()
 
     val anyWatched: Boolean get() = _series.value.any { it.watched }
+
+    /** Lit series.json (sans effet s'il a déjà été lu). À appeler hors du fil principal. */
+    @Synchronized
+    fun load() {
+        if (_loaded.value) return
+        val result = repository.load()
+        _series.value = sorted((result as? LoadResult.Ok)?.series.orEmpty())
+        _unreadable.value = result is LoadResult.Unreadable
+        _loaded.value = true
+    }
 
     fun dismissSaveError() {
         _saveFailed.value = false
@@ -153,13 +169,13 @@ class CollectionStore(
     }
 
     private fun update(transform: (List<Series>) -> List<Series>) {
-        if (_unreadable.value) return
+        if (!_loaded.value || _unreadable.value) return
         val newList = sorted(transform(_series.value))
         _series.value = newList
         saver.execute {
             try {
                 repository.save(newList)
-                afterSaved()
+                afterSaved(newList)
             } catch (e: IOException) {
                 _saveFailed.value = true
             }
