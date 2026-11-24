@@ -144,9 +144,10 @@ object ReleaseNotifier {
             NotificationChannel(CHANNEL, context.getString(R.string.channel_releases), NotificationManager.IMPORTANCE_DEFAULT)
         )
         news.forEach { (series, release) ->
+            val id = series.id.hashCode()
             manager.notify(
-                series.id.hashCode(),
-                build(context, series, context.getString(R.string.notif_new_volume, series.title), release.describe().text(context)),
+                id,
+                build(context, id, series, release, context.getString(R.string.notif_new_volume, series.title), release.describe().text(context)),
             )
         }
         // Rappel du jour de sortie : identifiant distinct, il ne remplace pas une annonce encore affichée.
@@ -154,14 +155,12 @@ object ReleaseNotifier {
             val today = LocalDate.now().toString()
             val text = if (release.date == today) context.getString(R.string.notif_out_today, release.volume)
             else context.getString(R.string.notif_out_since, release.volume, formatReleaseDate(release.date))
-            manager.notify(
-                series.id.hashCode() xor REMINDER_ID,
-                build(context, series, context.getString(R.string.notif_volume_out, series.title), text),
-            )
+            val id = series.id.hashCode() xor REMINDER_ID
+            manager.notify(id, build(context, id, series, release, context.getString(R.string.notif_volume_out, series.title), text))
         }
     }
 
-    private fun build(context: Context, series: Series, title: String, text: String): Notification {
+    private fun build(context: Context, id: Int, series: Series, release: Release, title: String, text: String): Notification {
         // Un appui ouvre la fiche de la série : un code de requête par série, sinon Android
         // réutiliserait la même intention (et le même extra) pour toutes les notifications.
         val openSeries = PendingIntent.getActivity(
@@ -177,6 +176,7 @@ object ReleaseNotifier {
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(openSeries)
+            .addAction(0, context.getString(R.string.action_got_it), OwnedVolumeReceiver.intent(context, id, series.id, release.volume))
             .setAutoCancel(true)
             .build()
     }

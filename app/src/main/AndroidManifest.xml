@@ -51,6 +51,11 @@
         <receiver
             android:name=".update.UpdateInstallReceiver"
             android:exported="false" />
+
+        <!-- Bouton « Je l'ai » des notifications de sortie (appelé seulement par nos notifications). -->
+        <receiver
+            android:name=".releases.OwnedVolumeReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

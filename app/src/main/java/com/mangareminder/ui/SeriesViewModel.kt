@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import com.mangareminder.backup.AutoBackup
 import com.mangareminder.backup.BackupStatus
-import com.mangareminder.widget.MangaWidgetUpdater
 import com.mangareminder.data.Series
 import com.mangareminder.data.SeriesRepository
 import androidx.lifecycle.viewModelScope
@@ -25,7 +24,6 @@ import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.io.IOException
 import java.io.InputStream
-import java.util.concurrent.Executors
 import android.content.Context
 import androidx.core.content.edit
 import com.mangareminder.data.ListFilter
@@ -41,7 +39,7 @@ import com.mangareminder.releases.GOOGLE_BOOKS_HOSTS
 import com.mangareminder.releases.Http
 import java.net.URL
 import com.mangareminder.data.UndoAction
-import com.mangareminder.data.CollectionStore
+import com.mangareminder.AppCollection
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import kotlinx.coroutines.flow.SharingStarted
@@ -50,18 +48,11 @@ import kotlinx.coroutines.flow.stateIn
 import com.mangareminder.releases.CheckError
 
 class SeriesViewModel(app: Application) : AndroidViewModel(app) {
-    // Un seul fil d'écriture : les enregistrements s'appliquent dans l'ordre des modifications.
-    private val saver = Executors.newSingleThreadExecutor()
-
-    /** Collection et enregistrement (logique testée en unitaire) ; ici, seulement les effets Android. */
-    private val store = CollectionStore(
-        SeriesRepository(app),
-        saver,
-        afterSaved = { saved ->
-            AutoBackup.scheduleAfterChange(app)
-            MangaWidgetUpdater.update(app, saved, ReleaseStore.data.value)
-        },
-    )
+    /**
+     * Collection et enregistrement (logique testée en unitaire), partagés avec les actions des
+     * notifications ; ici, seulement les effets Android.
+     */
+    private val store = AppCollection.get(app)
 
     /** Faux tant que la collection n'est pas lue (lecture hors du fil principal). */
     val loaded: StateFlow<Boolean> = store.loaded
@@ -325,9 +316,6 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         store.afterSave { ReleaseScheduler.sync(getApplication<Application>(), store.anyWatched) }
     }
 
-    override fun onCleared() {
-        saver.shutdown()
-    }
 }
 
 sealed interface CoverSearch {

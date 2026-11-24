@@ -189,6 +189,7 @@ fun SeriesDetailScreen(
                         series, releases, checking, checkError, onCheckNow,
                         notificationsBlocked = !canNotify,
                         onOpenNotificationSettings = { context.startActivity(ReleaseNotifier.settingsIntent(context)) },
+                        onMarkOwned = { onAddVolumes(setOf(it)) },
                     )
                 }
             }
@@ -395,6 +396,7 @@ private fun ReleasesCard(
     onCheckNow: () -> Unit,
     notificationsBlocked: Boolean = false,
     onOpenNotificationSettings: () -> Unit = {},
+    onMarkOwned: (Int) -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -443,7 +445,14 @@ private fun ReleasesCard(
                             fontWeight = if (isNew) FontWeight.Bold else FontWeight.Normal,
                             color = if (release.link != null) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
                         )
+                        // Coche le tome sans chercher sa case dans la grille.
+                        if (release.volume !in series.ownedVolumes) {
+                            TextButton(onClick = { onMarkOwned(release.volume) }) {
+                                Text(stringResource(R.string.action_got_it))
+                            }
+                        }
                     }
                 }
             }
