@@ -115,6 +115,17 @@
     <string name="series_deleted">« %1$s » supprimée</string>
     <string name="menu_shopping">Liste à acheter</string>
     <string name="upcoming_title">Prochaines sorties</string>
+    <string name="stats_title">Statistiques</string>
+    <string name="stats_empty">Ajoute une série pour voir les statistiques de ta collection.</string>
+    <string name="stats_series">Séries</string>
+    <string name="stats_owned">Tomes possédés</string>
+    <string name="stats_complete">Séries complètes</string>
+    <string name="stats_missing">Tomes manquants</string>
+    <string name="stats_watched">Séries surveillées</string>
+    <string name="stats_read">Tomes lus</string>
+    <string name="stats_lent">Tomes prêtés</string>
+    <string name="stats_most_owned">Les plus fournies</string>
+    <string name="stats_most_missing">Où il manque le plus de tomes</string>
     <string name="upcoming_section_next">À paraître</string>
     <string name="upcoming_section_published">Déjà parus, pas encore achetés</string>
     <string name="upcoming_empty">Aucune sortie connue. Active la cloche d\'une série pour surveiller ses nouveaux tomes.</string>
@@ -239,6 +250,16 @@
         <item quantity="one">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, le dernier est gardé. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
         <item quantity="many">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
         <item quantity="other">Choisis un dossier, sur le téléphone ou dans Google Drive : après chaque modification, Manga Reminder y enregistre ta collection. Un fichier par jour, les %1$d derniers sont gardés. Pour revenir en arrière : menu ⋮ > Importer une sauvegarde.</item>
+    </plurals>
+    <plurals name="stats_volumes">
+        <item quantity="one">%d tome</item>
+        <item quantity="many">%d tomes</item>
+        <item quantity="other">%d tomes</item>
+    </plurals>
+    <plurals name="stats_missing_count">
+        <item quantity="one">%d manquant</item>
+        <item quantity="many">%d manquants</item>
+        <item quantity="other">%d manquants</item>
     </plurals>
     <plurals name="widget_to_buy">
         <item quantity="one">%d tome à acheter</item>
