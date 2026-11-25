@@ -92,6 +92,7 @@ fun SeriesListScreen(
     onOpenShopping: () -> Unit,
     onOpenAppearance: () -> Unit,
     onOpenUpcoming: () -> Unit,
+    onOpenStats: () -> Unit,
     onScan: () -> Unit,
     backupStatus: BackupStatus,
     onEnableBackup: (Uri) -> Boolean,
@@ -178,6 +179,14 @@ fun SeriesListScreen(
                             onClick = {
                                 menuOpen = false
                                 onOpenUpcoming()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.stats_title)) },
+                            enabled = series.isNotEmpty(),
+                            onClick = {
+                                menuOpen = false
+                                onOpenStats()
                             },
                         )
                         DropdownMenuItem(

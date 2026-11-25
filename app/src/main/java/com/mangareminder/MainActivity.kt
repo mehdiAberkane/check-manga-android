@@ -25,6 +25,7 @@ import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
 import com.mangareminder.ui.ShoppingListScreen
 import com.mangareminder.ui.UpcomingReleasesScreen
+import com.mangareminder.ui.StatsScreen
 import com.mangareminder.ui.ScanDialog
 import com.mangareminder.ui.startBarcodeScan
 import com.mangareminder.ui.UnreadableCollectionScreen
@@ -117,6 +118,7 @@ private fun MangaReminderApp(
     var showShopping by rememberSaveable { mutableStateOf(false) }
     var showAppearance by rememberSaveable { mutableStateOf(false) }
     var showUpcoming by rememberSaveable { mutableStateOf(false) }
+    var showStats by rememberSaveable { mutableStateOf(false) }
     val appearance by appearanceViewModel.settings.collectAsStateWithLifecycle()
     val selected = series.find { it.id == selectedId }
 
@@ -127,6 +129,7 @@ private fun MangaReminderApp(
             if (series.any { it.id == openSeriesId }) {
                 showShopping = false
                 showUpcoming = false
+                showStats = false
                 selectedId = openSeriesId
             }
             onSeriesOpened()
@@ -137,6 +140,7 @@ private fun MangaReminderApp(
         if (openShopping) {
             selectedId = null
             showUpcoming = false
+            showStats = false
             showShopping = true
             onShoppingOpened()
         }
@@ -194,6 +198,13 @@ private fun MangaReminderApp(
             onBack = { showUpcoming = false },
             onOpen = { selectedId = it },
         )
+    } else if (selected == null && showStats) {
+        BackHandler { showStats = false }
+        StatsScreen(
+            series = series,
+            onBack = { showStats = false },
+            onOpen = { selectedId = it },
+        )
     } else if (selected == null) {
         SeriesListScreen(
             series = series,
@@ -210,6 +221,7 @@ private fun MangaReminderApp(
             onOpenShopping = { showShopping = true },
             onOpenAppearance = { showAppearance = true },
             onOpenUpcoming = { showUpcoming = true },
+            onOpenStats = { showStats = true },
             onScan = startScan,
             backupStatus = backupStatus,
             onEnableBackup = viewModel::enableBackup,

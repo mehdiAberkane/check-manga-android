@@ -51,6 +51,9 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   dans `series.json` (champ `cover`, facultatif) et donc dans l'export.
 - Liste « À acheter » (menu ⋮) : tomes manquants et nouveaux tomes trouvés par la surveillance (parus ou à
   paraître), toutes séries confondues, avec un bouton Partager (texte simple, ex. « One Piece : 45, 47-48 »).
+- « Statistiques » (menu ⋮) : nombre de séries, de tomes possédés, de séries complètes, de tomes
+  manquants, de séries surveillées, de tomes lus et prêtés, puis les séries les plus fournies et celles où il
+  manque le plus de tomes (un appui ouvre la fiche).
 - « Prochaines sorties » (menu ⋮) : tomes à paraître de toutes les séries surveillées, le plus proche
   d'abord, puis ceux déjà parus mais pas encore achetés. Lit les résultats de la surveillance, sans requête ;
   un appui ouvre la fiche de la série.
