@@ -1,7 +1,10 @@
 package com.mangareminder.ui
 
 import android.app.Application
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mangareminder.R
@@ -11,21 +14,24 @@ import com.mangareminder.update.UpdateInfo
 import com.mangareminder.update.UpdateState
 import com.mangareminder.update.UpdateStatus
 import com.mangareminder.update.Updater
+import com.mangareminder.update.isAllowedUrl
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import java.io.File
 import java.io.IOException
 
 class UpdateViewModel(app: Application) : AndroidViewModel(app) {
-    private val updater = Updater(app)
+    private val updater = Updater()
     private var job: Job? = null
 
     val state: StateFlow<UpdateState> = UpdateStatus.state
 
     init {
-        // APK d'une tentative interrompue (app tuée pendant le téléchargement).
-        if (state.value == UpdateState.Idle) updater.clean()
+        // APK laissé dans le cache par l'ancienne mise à jour intégrée (versions 1.5 et avant).
+        viewModelScope.launch(Dispatchers.IO) { File(app.cacheDir, "update").deleteRecursively() }
     }
 
     fun check() {
@@ -39,34 +45,26 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun install(info: UpdateInfo) {
-        if (job?.isActive == true) return
-        if (!updater.canInstall()) {
-            UpdateStatus.set(UpdateState.NeedsPermission(info))
+    /**
+     * Ouvre le lien de l'APK dans le navigateur, qui le télécharge ; l'utilisateur l'ouvre ensuite
+     * et l'installeur d'Android le met à jour par-dessus (même signature : la collection est gardée).
+     */
+    fun download(context: Context, info: UpdateInfo) {
+        // Déjà vérifié à la lecture de la release ; on ne confie au navigateur qu'un lien GitHub en HTTPS.
+        if (!isAllowedUrl(info.apk.url)) {
+            UpdateStatus.set(UpdateState.Failed(UiMessage(R.string.update_err_url_refused)))
             return
         }
-        UpdateStatus.set(UpdateState.Downloading(info, 0f))
-        job = viewModelScope.launch {
-            val result = runReporting {
-                val apk = updater.download(info) { UpdateStatus.set(UpdateState.Downloading(info, it)) }
-                UpdateStatus.set(UpdateState.Installing)
-                updater.install(apk)
-                null
-            }
-            // En cas de succès, c'est UpdateInstallReceiver qui donne la suite.
-            if (result != null) UpdateStatus.set(result)
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, info.apk.url.toUri()))
+            UpdateStatus.set(UpdateState.Idle)
+        } catch (e: ActivityNotFoundException) {
+            UpdateStatus.set(UpdateState.Failed(UiMessage(R.string.update_err_no_browser)))
         }
-    }
-
-    /** Écran des réglages Android où autoriser l'installation ; on revient ensuite à la proposition. */
-    fun permissionSettings(info: UpdateInfo): Intent {
-        UpdateStatus.set(UpdateState.Available(info))
-        return updater.permissionSettingsIntent()
     }
 
     fun dismiss() {
         job?.cancel()
-        updater.clean()
         UpdateStatus.set(UpdateState.Idle)
     }
 

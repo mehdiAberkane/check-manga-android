@@ -61,14 +61,16 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   (Material You, Android 12+) ou couleur principale au choix, taille des cases des tomes, fond d'écran tiré
   de la galerie (sélecteur de photos, sans permission), copié et réduit dans l'app, atténué par un filtre
   réglable, derrière toutes les pages. Réglages gardés sur le téléphone, hors collection et hors sauvegarde.
-- Mise à jour intégrée (menu ⋮ > « Rechercher une mise à jour ») : l'app lit la dernière release
-  stable de GitHub, télécharge son APK et l'installe, sans perdre la collection. Avant l'installation,
-  elle vérifie la taille, le SHA-256 (`version.json` et l'empreinte calculée par GitHub), le nom du
-  paquet, le `versionCode` (jamais de retour en arrière) et le certificat, qui doit être celui de
-  l'app installée. Seuls les hôtes GitHub sont contactés, en HTTPS.
+- Recherche de mise à jour (menu ⋮ > « Rechercher une mise à jour ») : l'app lit la dernière release
+  stable de GitHub et vérifie son `version.json` (tag, `versionCode` plus récent, APK présent, taille,
+  SHA-256 identique à l'empreinte calculée par GitHub). Seuls les hôtes GitHub sont contactés, en HTTPS.
+  « Télécharger » ouvre le lien de l'APK dans le navigateur ; une fois le fichier ouvert, l'installeur
+  d'Android met l'app à jour par-dessus, sans perdre la collection. L'empreinte SHA-256 attendue est
+  affichée pour vérifier le fichier.
 
-  La première fois, Android demande d'autoriser l'app à installer des applications (« Installer des
-  applis inconnues »), puis confirme chaque mise à jour.
+  L'app n'installe plus elle-même l'APK (ni permission `REQUEST_INSTALL_PACKAGES`) : Play Protect
+  bloquait la mise à jour, une app qui télécharge et installe des APK ressemblant à une appli malveillante.
+  Play Protect analyse quand même l'APK à l'installation depuis le navigateur.
 
 ## Stack
 
