@@ -116,25 +116,3 @@ fun parseUpdate(release: LatestRelease, versionJson: String): UpdateInfo {
     }
     return UpdateInfo(versionCode, versionName, release.tag, release.notes, apk, sha256)
 }
-
-/**
- * Contrôle de l'APK téléchargé avant installation (sans dépendance Android, testé en unitaire).
- * @return null si l'APK peut être installé, sinon l'erreur à afficher.
- */
-fun checkDownloadedPackage(
-    packageName: String,
-    expectedPackage: String,
-    versionCode: Long,
-    releaseVersionCode: Int,
-    installedVersionCode: Long,
-    downloadedSigners: Set<String>,
-    installedSigners: Set<String>,
-): UiMessage? = when {
-    packageName != expectedPackage -> UiMessage(R.string.update_err_wrong_package)
-    // Le code doit être celui annoncé par la release, et jamais un retour en arrière.
-    versionCode != releaseVersionCode.toLong() || versionCode <= installedVersionCode ->
-        UiMessage(R.string.update_err_version_mismatch)
-    downloadedSigners.isEmpty() -> UiMessage(R.string.update_err_signature_unreadable)
-    downloadedSigners != installedSigners -> UiMessage(R.string.update_err_wrong_signature)
-    else -> null
-}

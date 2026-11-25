@@ -255,8 +255,7 @@ private fun MangaReminderApp(
     if (updateState != UpdateState.Idle) {
         UpdateDialog(
             state = updateState,
-            onInstall = updateViewModel::install,
-            onOpenPermission = { context.startActivity(updateViewModel.permissionSettings(it)) },
+            onDownload = { updateViewModel.download(context, it) },
             onDismiss = updateViewModel::dismiss,
         )
     }
