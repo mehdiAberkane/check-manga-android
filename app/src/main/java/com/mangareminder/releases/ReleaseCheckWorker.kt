@@ -41,6 +41,7 @@ class ReleaseCheckWorker(context: Context, params: WorkerParameters) : Coroutine
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         ReleaseStore.init(applicationContext)
+        GoogleBooksKeyStore.init(applicationContext)
         // Collection illisible : on ne touche à rien (ni cache des sorties, ni copie de côté).
         val all = (SeriesRepository(applicationContext).load(setAside = false) as? LoadResult.Ok)?.series
             ?: return@withContext Result.success()

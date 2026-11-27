@@ -42,8 +42,17 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   (« Dragon Ball Super », « Boruto - Naruto Next Generations ») et les éditions à numérotation différente
   (perfect, double…) sont écartées. Nommer la série comme sur la couverture.
 
-  L'API Google Books est appelée sans clé : son quota est partagé, une vérification peut échouer
-  et sera retentée plus tard.
+  Sans clé, l'API Google Books est appelée anonymement : son quota est partagé entre toutes les applis
+  qui l'appellent ainsi, une recherche peut échouer (429) et sera retentée plus tard.
+
+  Clé d'API personnelle (menu ⋮ > « Clé d'API Google Books ») : chacun crée sa propre clé gratuite
+  (console Google Cloud > activer « Books API » > Identifiants > Créer une clé API, à restreindre à
+  la Books API) et la colle dans l'app, qui l'ajoute à toutes les requêtes Google Books (sorties,
+  couvertures, ISBN). Aucune clé n'est livrée avec l'app : le dépôt et l'APK sont publics. La clé est
+  chiffrée par une clé du Keystore Android, dans des préférences privées ; la sauvegarde Android ne
+  garde que `series.json`, la clé n'est donc ni sauvegardée, ni exportée, ni transférée. Elle n'est
+  jamais réaffichée en entier (seulement ses 4 derniers caractères). « Tester » vérifie une clé avant
+  ou après l'enregistrement ; le message « quota épuisé » d'une fiche mène à ce réglage.
 - Couvertures : la fiche d'une série propose « Choisir la couverture » parmi celles trouvées sur Google
   Books (une recherche, seulement à la demande). Sans choix, une série surveillée prend la couverture du
   plus petit tome trouvé. Miniatures en HTTPS depuis les serveurs d'images de Google Books uniquement,

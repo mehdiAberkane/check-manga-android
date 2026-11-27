@@ -36,8 +36,12 @@ import com.mangareminder.data.matchScannedBook
 import com.mangareminder.data.normalizeIsbn
 import com.mangareminder.data.parseIsbnLookup
 import com.mangareminder.releases.GOOGLE_BOOKS_HOSTS
+import com.mangareminder.releases.GoogleBooksKeyStore
+import com.mangareminder.releases.KeyTestResult
+import com.mangareminder.releases.maskApiKey
+import com.mangareminder.releases.normalizeApiKey
+import com.mangareminder.releases.googleBooksUrl
 import com.mangareminder.releases.Http
-import java.net.URL
 import com.mangareminder.data.UndoAction
 import com.mangareminder.AppCollection
 import androidx.work.WorkInfo
@@ -69,10 +73,34 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         // Lecture des fichiers hors du fil principal ; l'écran affiche un chargement d'ici là.
         viewModelScope.launch(Dispatchers.IO) {
             ReleaseStore.init(app)
+            GoogleBooksKeyStore.init(app)
+            _apiKeyMask.value = GoogleBooksKeyStore.key?.let(::maskApiKey)
             store.load()
             ReleaseScheduler.sync(app, store.anyWatched)
             CoverCache.cleanUpDaily(app, store.series.value, ReleaseStore.data.value)
         }
+    }
+
+    private val _apiKeyMask = MutableStateFlow<String?>(null)
+    /** Fin de la clé d'API Google Books enregistrée (« …a1B2 »), ou null : requêtes anonymes. */
+    val apiKeyMask: StateFlow<String?> = _apiKeyMask.asStateFlow()
+
+    /** @return false si la clé n'a pas la bonne forme ou n'a pas pu être enregistrée. */
+    suspend fun saveApiKey(raw: String): Boolean = withContext(Dispatchers.IO) {
+        GoogleBooksKeyStore.save(getApplication(), raw).also { saved ->
+            if (saved) _apiKeyMask.value = GoogleBooksKeyStore.key?.let(::maskApiKey)
+        }
+    }
+
+    suspend fun clearApiKey() = withContext(Dispatchers.IO) {
+        GoogleBooksKeyStore.clear(getApplication())
+        _apiKeyMask.value = null
+    }
+
+    /** Teste la clé tapée, ou l'enregistrée si [raw] est vide ; null s'il n'y a aucune clé valable. */
+    suspend fun testApiKey(raw: String): KeyTestResult? {
+        val key = (if (raw.isBlank()) GoogleBooksKeyStore.key else normalizeApiKey(raw)) ?: return null
+        return withContext(Dispatchers.IO) { GoogleBooksSource.testKey(key) }
     }
 
     /** Dernières sorties trouvées, par id de série. */
@@ -187,7 +215,7 @@ class SeriesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val title = withContext(Dispatchers.IO) {
                 runCatching {
-                    parseIsbnLookup(Http.get(URL("https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn"), GOOGLE_BOOKS_HOSTS))
+                    parseIsbnLookup(Http.get(googleBooksUrl("isbn:$isbn"), GOOGLE_BOOKS_HOSTS))
                 }
             }
             // La recherche peut avoir été fermée entre-temps.

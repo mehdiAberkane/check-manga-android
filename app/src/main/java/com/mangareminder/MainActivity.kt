@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import com.mangareminder.ui.ShoppingListScreen
 import com.mangareminder.ui.UpcomingReleasesScreen
 import com.mangareminder.ui.StatsScreen
+import com.mangareminder.ui.ApiKeyDialog
 import com.mangareminder.ui.ScanDialog
 import com.mangareminder.ui.startBarcodeScan
 import com.mangareminder.ui.UnreadableCollectionScreen
@@ -130,6 +131,8 @@ private fun MangaReminderApp(
     var showAppearance by rememberSaveable { mutableStateOf(false) }
     var showUpcoming by rememberSaveable { mutableStateOf(false) }
     var showStats by rememberSaveable { mutableStateOf(false) }
+    var showApiKey by rememberSaveable { mutableStateOf(false) }
+    val apiKeyMask by viewModel.apiKeyMask.collectAsStateWithLifecycle()
     val appearance by appearanceViewModel.settings.collectAsStateWithLifecycle()
     val selected = series.find { it.id == selectedId }
 
@@ -241,6 +244,7 @@ private fun MangaReminderApp(
             onOpenAppearance = { showAppearance = true },
             onOpenUpcoming = { showUpcoming = true },
             onOpenStats = { showStats = true },
+            onOpenApiKey = { showApiKey = true },
             onScan = startScan,
             backupStatus = backupStatus,
             onEnableBackup = viewModel::enableBackup,
@@ -280,6 +284,18 @@ private fun MangaReminderApp(
             onLend = { volume, to -> viewModel.lend(selected.id, volume, to) },
             onReturnLoan = { volume -> viewModel.returnLoan(selected.id, volume) },
             gridMinSize = appearance.gridSize.minDp.dp,
+            hasApiKey = apiKeyMask != null,
+            onOpenApiKey = { showApiKey = true },
+        )
+    }
+
+    if (showApiKey) {
+        ApiKeyDialog(
+            savedMask = apiKeyMask,
+            onSave = viewModel::saveApiKey,
+            onClear = viewModel::clearApiKey,
+            onTest = viewModel::testApiKey,
+            onDismiss = { showApiKey = false },
         )
     }
 

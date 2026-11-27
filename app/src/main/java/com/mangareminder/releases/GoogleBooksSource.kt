@@ -15,23 +15,34 @@ interface ReleaseSource {
     fun search(seriesTitle: String): List<Release>
 }
 
-/**
- * API publique Google Books, sans clé : le quota est partagé entre toutes les applis
- * qui l'appellent ainsi, une vérification peut donc échouer et sera retentée plus tard.
- */
 /** Seul hôte de l'API Google Books (recherche des sorties, ISBN). */
 val GOOGLE_BOOKS_HOSTS = setOf("www.googleapis.com")
+
+private const val VOLUMES_URL = "https://www.googleapis.com/books/v1/volumes"
+
+/**
+ * Adresse d'une recherche Google Books, avec la clé d'API de l'utilisateur s'il en a saisi une.
+ * Sans clé, le quota est partagé entre toutes les applis qui appellent l'API ainsi : une recherche
+ * peut échouer (429) et sera retentée plus tard.
+ * @param query requête déjà encodée (« isbn:… », « intitle:… »), suivie des autres paramètres.
+ */
+fun googleBooksUrl(query: String, key: String? = GoogleBooksKeyStore.key): URL =
+    URL(withApiKey("$VOLUMES_URL?q=$query", key))
 
 object GoogleBooksSource : ReleaseSource {
     override val name = "Google Books"
 
     override fun search(seriesTitle: String): List<Release> {
         val query = URLEncoder.encode("intitle:\"$seriesTitle\"", "UTF-8")
-        val url = URL(
-            "https://www.googleapis.com/books/v1/volumes?q=$query" +
-                "&langRestrict=fr&printType=books&orderBy=newest&maxResults=40"
-        )
+        val url = googleBooksUrl("$query&langRestrict=fr&printType=books&orderBy=newest&maxResults=40")
         return parse(Http.get(url, GOOGLE_BOOKS_HOSTS), seriesTitle)
+    }
+
+    /** Essaie une clé (pas forcément enregistrée) avec une petite requête. À appeler hors du fil principal. */
+    fun testKey(key: String): KeyTestResult {
+        val error = runCatching { Http.get(googleBooksUrl("isbn:9782723489775&maxResults=1", key), GOOGLE_BOOKS_HOSTS) }
+            .exceptionOrNull()
+        return keyTestResult(error)
     }
 
     /** Tomes de la série dans une réponse de l'API (sans réseau : testé en unitaire). */

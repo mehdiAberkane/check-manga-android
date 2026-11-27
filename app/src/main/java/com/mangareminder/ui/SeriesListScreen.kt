@@ -93,6 +93,7 @@ fun SeriesListScreen(
     onOpenAppearance: () -> Unit,
     onOpenUpcoming: () -> Unit,
     onOpenStats: () -> Unit,
+    onOpenApiKey: () -> Unit,
     onScan: () -> Unit,
     backupStatus: BackupStatus,
     onEnableBackup: (Uri) -> Boolean,
@@ -231,6 +232,13 @@ fun SeriesListScreen(
                             onClick = {
                                 menuOpen = false
                                 showBackup = true
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.api_key_title)) },
+                            onClick = {
+                                menuOpen = false
+                                onOpenApiKey()
                             },
                         )
                         DropdownMenuItem(

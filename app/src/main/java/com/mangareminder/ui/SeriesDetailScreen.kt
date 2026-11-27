@@ -107,6 +107,8 @@ fun SeriesDetailScreen(
     onLend: (volume: Int, to: String) -> Unit,
     onReturnLoan: (volume: Int) -> Unit,
     gridMinSize: Dp = 60.dp,
+    hasApiKey: Boolean = false,
+    onOpenApiKey: () -> Unit = {},
 ) {
     // Tome dont on modifie le statut (appui long sur une case possédée).
     var statusVolume by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -190,6 +192,8 @@ fun SeriesDetailScreen(
                         notificationsBlocked = !canNotify,
                         onOpenNotificationSettings = { context.startActivity(ReleaseNotifier.settingsIntent(context)) },
                         onMarkOwned = { onAddVolumes(setOf(it)) },
+                        hasApiKey = hasApiKey,
+                        onOpenApiKey = onOpenApiKey,
                     )
                 }
             }
@@ -396,6 +400,8 @@ private fun ReleasesCard(
     onCheckNow: () -> Unit,
     notificationsBlocked: Boolean = false,
     onOpenNotificationSettings: () -> Unit = {},
+    hasApiKey: Boolean = false,
+    onOpenApiKey: () -> Unit = {},
     onMarkOwned: (Int) -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
@@ -469,6 +475,12 @@ private fun ReleasesCard(
             }
             checkError?.let {
                 Text(checkErrorText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                // Quota anonyme épuisé : avec sa propre clé, l'utilisateur a son propre quota.
+                if (it.failure == CheckFailure.QUOTA) {
+                    TextButton(onClick = onOpenApiKey, contentPadding = PaddingValues(0.dp)) {
+                        Text(stringResource(if (hasApiKey) R.string.api_key_check else R.string.api_key_add))
+                    }
+                }
             }
             OutlinedButton(onClick = onCheckNow, enabled = !checking) { Text(stringResource(R.string.action_check_now)) }
         }
