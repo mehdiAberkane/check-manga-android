@@ -188,6 +188,9 @@
     <string name="release_upcoming">Tome %1$d · à paraître le %2$s</string>
     <string name="release_published">Tome %1$d · paru le %2$s</string>
     <string name="channel_releases">Sorties de tomes</string>
+    <string name="channel_updates">Mises à jour de l\'application</string>
+    <string name="notif_update_title">Manga Reminder %1$s est disponible</string>
+    <string name="notif_update_text">Touche pour voir les nouveautés et télécharger la mise à jour.</string>
     <string name="notif_new_volume">Nouveau tome : %1$s</string>
     <string name="action_got_it">Je l\'ai</string>
     <string name="notif_volume_out">Disponible : %1$s</string>
@@ -200,6 +203,7 @@
     <string name="update_up_to_date">Tu as déjà la dernière version (%1$s).</string>
     <string name="update_versions">Version %1$s (installée : %2$s). Ta collection est conservée.</string>
     <string name="update_how_to">« Télécharger » ouvre le fichier dans le navigateur. Ouvre-le une fois téléchargé : Android installe la mise à jour par-dessus, sans rien effacer.</string>
+    <string name="update_auto_check">Vérifier chaque semaine et me prévenir</string>
     <string name="update_sha256">Empreinte SHA-256 du fichier :</string>
     <string name="update_err_not_stable">La dernière release n\'est pas une version stable.</string>
     <string name="update_err_github_unreadable">Réponse de GitHub illisible.</string>

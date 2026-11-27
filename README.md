@@ -71,6 +71,11 @@ Application Android pour se souvenir des tomes de manga qu'on possède déjà.
   d'Android met l'app à jour par-dessus, sans perdre la collection. L'empreinte SHA-256 attendue est
   affichée pour vérifier le fichier.
 
+  Vérification automatique une fois par semaine (réseau requis) : si une version plus récente existe, une
+  notification (canal « Mises à jour de l'application », distinct des sorties) le signale, une seule fois
+  par version ; un appui ouvre la fenêtre de mise à jour. Rien n'est téléchargé sans l'utilisateur.
+  Désactivable dans la fenêtre de mise à jour (« Vérifier chaque semaine et me prévenir »).
+
   L'app n'installe plus elle-même l'APK (ni permission `REQUEST_INSTALL_PACKAGES`) : Play Protect
   bloquait la mise à jour, une app qui télécharge et installe des APK ressemblant à une appli malveillante.
   Play Protect analyse quand même l'APK à l'installation depuis le navigateur.

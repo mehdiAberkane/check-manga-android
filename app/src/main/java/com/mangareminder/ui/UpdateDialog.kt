@@ -2,6 +2,12 @@ package com.mangareminder.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +34,8 @@ fun UpdateDialog(
     state: UpdateState,
     onDownload: (UpdateInfo) -> Unit,
     onDismiss: () -> Unit,
+    autoCheck: Boolean = true,
+    onAutoCheck: (Boolean) -> Unit = {},
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,14 +51,31 @@ fun UpdateDialog(
             )
         },
         text = {
-            when (state) {
-                UpdateState.Idle, UpdateState.Checking -> Column {
-                    Text(stringResource(R.string.update_checking))
-                    CircularProgressIndicator(Modifier.padding(top = 16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (state) {
+                    UpdateState.Idle, UpdateState.Checking -> Column {
+                        Text(stringResource(R.string.update_checking))
+                        CircularProgressIndicator(Modifier.padding(top = 16.dp))
+                    }
+                    UpdateState.UpToDate -> Text(stringResource(R.string.update_up_to_date, BuildConfig.VERSION_NAME))
+                    is UpdateState.Available -> ReleaseDetails(state.info)
+                    is UpdateState.Failed -> Text(state.message.text())
                 }
-                UpdateState.UpToDate -> Text(stringResource(R.string.update_up_to_date, BuildConfig.VERSION_NAME))
-                is UpdateState.Available -> ReleaseDetails(state.info)
-                is UpdateState.Failed -> Text(state.message.text())
+                if (state != UpdateState.Checking && state != UpdateState.Idle) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(value = autoCheck, role = Role.Switch, onValueChange = onAutoCheck),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.update_auto_check),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(checked = autoCheck, onCheckedChange = null)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -71,7 +96,7 @@ fun UpdateDialog(
 @Composable
 private fun ReleaseDetails(info: UpdateInfo) {
     Column(
-        Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+        Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(stringResource(R.string.update_versions, info.versionName, BuildConfig.VERSION_NAME))

@@ -9,7 +9,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mangareminder.R
 import com.mangareminder.UiMessage
+import com.mangareminder.update.AutoUpdatePrefs
 import com.mangareminder.update.UpdateException
+import com.mangareminder.update.UpdateScheduler
 import com.mangareminder.update.UpdateInfo
 import com.mangareminder.update.UpdateState
 import com.mangareminder.update.UpdateStatus
@@ -18,7 +20,9 @@ import com.mangareminder.update.isAllowedUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -29,7 +33,12 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
 
     val state: StateFlow<UpdateState> = UpdateStatus.state
 
+    private val _autoCheck = MutableStateFlow(AutoUpdatePrefs.isEnabled(app))
+    /** Vérification automatique chaque semaine (réglage de la fenêtre de mise à jour). */
+    val autoCheck: StateFlow<Boolean> = _autoCheck.asStateFlow()
+
     init {
+        UpdateScheduler.sync(app)
         // APK laissé dans le cache par l'ancienne mise à jour intégrée (versions 1.5 et avant).
         viewModelScope.launch(Dispatchers.IO) { File(app.cacheDir, "update").deleteRecursively() }
     }
@@ -61,6 +70,11 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: ActivityNotFoundException) {
             UpdateStatus.set(UpdateState.Failed(UiMessage(R.string.update_err_no_browser)))
         }
+    }
+
+    fun setAutoCheck(enabled: Boolean) {
+        AutoUpdatePrefs.setEnabled(getApplication(), enabled)
+        _autoCheck.value = enabled
     }
 
     fun dismiss() {
