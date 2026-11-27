@@ -116,3 +116,10 @@ fun parseUpdate(release: LatestRelease, versionJson: String): UpdateInfo {
     }
     return UpdateInfo(versionCode, versionName, release.tag, release.notes, apk, sha256)
 }
+
+/**
+ * Vérification automatique : notifier une version plus récente que celle installée, une seule fois
+ * (jamais deux fois la même version, ni une plus ancienne que la dernière notifiée).
+ */
+fun shouldNotifyUpdate(versionCode: Int, installedVersionCode: Int, lastNotifiedVersionCode: Int): Boolean =
+    versionCode > installedVersionCode && versionCode > lastNotifiedVersionCode

@@ -104,4 +104,17 @@ class UpdateCheckTest {
         val info = parseUpdate(parseLatestRelease(releaseJson(digest = "")), versionJson())
         assertEquals(sha, info.sha256)
     }
+
+    @Test
+    fun `vérification automatique, chaque version notifiée une seule fois`() {
+        // Plus récente que l'installée, jamais notifiée.
+        assertTrue(shouldNotifyUpdate(7, installedVersionCode = 6, lastNotifiedVersionCode = 0))
+        // Déjà notifiée, ou plus ancienne que la dernière notifiée.
+        assertFalse(shouldNotifyUpdate(7, installedVersionCode = 6, lastNotifiedVersionCode = 7))
+        assertFalse(shouldNotifyUpdate(7, installedVersionCode = 6, lastNotifiedVersionCode = 8))
+        // Version suivante après une notification.
+        assertTrue(shouldNotifyUpdate(8, installedVersionCode = 6, lastNotifiedVersionCode = 7))
+        // Déjà installée (ou plus ancienne).
+        assertFalse(shouldNotifyUpdate(6, installedVersionCode = 6, lastNotifiedVersionCode = 0))
+    }
 }

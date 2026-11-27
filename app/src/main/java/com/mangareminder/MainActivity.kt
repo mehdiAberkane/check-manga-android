@@ -47,12 +47,16 @@ class MainActivity : ComponentActivity() {
     /** Série à ouvrir (notification de sortie), consommée par l'écran ; id inconnu : rien. */
     private val openSeriesId = mutableStateOf<Long?>(null)
 
+    /** Recherche de mise à jour demandée (notification de nouvelle version), consommée par l'écran. */
+    private val checkUpdate = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (savedInstanceState == null) {
             openShopping.value = intent.getBooleanExtra(EXTRA_SHOPPING, false)
             openSeriesId.value = seriesIdOf(intent)
+            checkUpdate.value = intent.getBooleanExtra(EXTRA_CHECK_UPDATE, false)
         }
         setContent {
             val appearanceViewModel: AppearanceViewModel = viewModel()
@@ -64,6 +68,8 @@ class MainActivity : ComponentActivity() {
                         onShoppingOpened = { openShopping.value = false },
                         openSeriesId = openSeriesId.value,
                         onSeriesOpened = { openSeriesId.value = null },
+                        checkUpdate = checkUpdate.value,
+                        onUpdateChecked = { checkUpdate.value = false },
                         appearanceViewModel = appearanceViewModel,
                     )
                 }
@@ -75,6 +81,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_SHOPPING, false)) openShopping.value = true
         seriesIdOf(intent)?.let { openSeriesId.value = it }
+        if (intent.getBooleanExtra(EXTRA_CHECK_UPDATE, false)) checkUpdate.value = true
     }
 
     /** L'activité est exportée : l'extra peut venir de n'importe où, il est seulement lu comme un id. */
@@ -84,6 +91,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_SHOPPING = "com.mangareminder.SHOPPING"
         const val EXTRA_SERIES_ID = "com.mangareminder.SERIES_ID"
+        const val EXTRA_CHECK_UPDATE = "com.mangareminder.CHECK_UPDATE"
     }
 }
 
@@ -93,6 +101,8 @@ private fun MangaReminderApp(
     onShoppingOpened: () -> Unit,
     openSeriesId: Long?,
     onSeriesOpened: () -> Unit,
+    checkUpdate: Boolean,
+    onUpdateChecked: () -> Unit,
     appearanceViewModel: AppearanceViewModel,
     viewModel: SeriesViewModel = viewModel(),
     updateViewModel: UpdateViewModel = viewModel(),
@@ -103,6 +113,7 @@ private fun MangaReminderApp(
     val checking by viewModel.checking.collectAsStateWithLifecycle()
     val checkError by viewModel.checkError.collectAsStateWithLifecycle()
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
+    val autoCheck by updateViewModel.autoCheck.collectAsStateWithLifecycle()
     val pendingImport by viewModel.pendingImport.collectAsStateWithLifecycle()
     val coverSearch by viewModel.coverSearch.collectAsStateWithLifecycle()
     val backupStatus by viewModel.backupStatus.collectAsStateWithLifecycle()
@@ -133,6 +144,14 @@ private fun MangaReminderApp(
                 selectedId = openSeriesId
             }
             onSeriesOpened()
+        }
+    }
+
+    // Nouvelle lecture de la release : la notification peut dater de plusieurs jours.
+    LaunchedEffect(checkUpdate) {
+        if (checkUpdate) {
+            updateViewModel.check()
+            onUpdateChecked()
         }
     }
 
@@ -269,6 +288,8 @@ private fun MangaReminderApp(
             state = updateState,
             onDownload = { updateViewModel.download(context, it) },
             onDismiss = updateViewModel::dismiss,
+            autoCheck = autoCheck,
+            onAutoCheck = updateViewModel::setAutoCheck,
         )
     }
 
