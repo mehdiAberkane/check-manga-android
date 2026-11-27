@@ -8,7 +8,9 @@ import java.net.SocketTimeoutException
 
 class GoogleBooksKeyTest {
 
-    private val key = "AIzaSyA1b2C3d4E5f6G7h8I9j0K-L_m2N3o4P5q"
+    // Valeur inventée, volontairement sans le préfixe « AIza » des vraies clés Google (détecté par le
+    // secret scanning de GitHub).
+    private val key = "test_key_A1b2C3d4E5f6G7h8I9j0K-L_m2N3o4"
 
     @Test
     fun `forme de la clé`() {
@@ -16,9 +18,9 @@ class GoogleBooksKeyTest {
         assertNull(normalizeApiKey(""))
         assertNull(normalizeApiKey("trop-courte"))
         assertNull(normalizeApiKey("x".repeat(101)))
-        assertNull(normalizeApiKey("AIzaSy avec des espaces dedans 1234"))
-        assertNull(normalizeApiKey("AIzaSyA1b2C3d4E5f6G7h8&q=autre"))
-        assertNull(normalizeApiKey("AIzaSyA1b2C3d4E5f6G7h8I9j0é"))
+        assertNull(normalizeApiKey("test_key_ avec des espaces dedans 1234"))
+        assertNull(normalizeApiKey("test_key_A1b2C3d4E5f6G7h8&q=autre"))
+        assertNull(normalizeApiKey("test_key_A1b2C3d4E5f6G7h8I9j0é"))
     }
 
     @Test
@@ -32,7 +34,7 @@ class GoogleBooksKeyTest {
 
     @Test
     fun `clé masquée à l'affichage`() {
-        assertEquals("…4P5q", maskApiKey(key))
+        assertEquals("…N3o4", maskApiKey(key))
     }
 
     @Test
